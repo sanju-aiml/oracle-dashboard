@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ORACLE · AI Business Prediction &amp; Decision Intelligence Suite</title>
+  <style>
+    :root {
+      --ivory: #fdfaf4;
+      --cream: #f6eedb;
+      --card-bg: rgba(255, 252, 245, 0.94);
+      --gold: #b38226;
+      --gold-dark: #8c6317;
+      --gold-light: #e6cb85;
+      --gold-border: #d6ba75;
+      --emerald: #185c40;
+      --emerald-dark: #10422d;
+      --emerald-bg: #e4f2eb;
+      --blush: #f4d3c6;
+      --blush-dark: #a84e37;
+      --ink: #2b2116;
+      --ink-light: #4a3c2c;
+      --mute: #786551;
+      --danger: #b53826;
+      --radius: 18px;
+      --shadow: 0 10px 30px rgba(179, 130, 38, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.55 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background: var(--ivory);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(45vmax 35vmax at 12% 18%, #f8dfd399, transparent),
+        radial-gradient(40vmax 32vmax at 88% 82%, #ebd8a488, transparent),
+        radial-gradient(35vmax 28vmax at 75% 15%, #d5e8dc77, transparent),
+        var(--ivory);
+      animation: ambientGlow 26s ease-in-out infinite alternate;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -80px;
+      z-index: -1;
+      opacity: 0.42;
+      background:
+        linear-gradient(45deg, transparent 48%, rgba(196, 155, 66, 0.22) 49% 51%, transparent 52%) 0 0/72px 72px,
+        linear-gradient(-45deg, transparent 48%, rgba(196, 155, 66, 0.16) 49% 51%, transparent 52%) 0 0/72px 72px;
+      animation: wallpaperScroll 45s linear infinite;
+    }
+    @keyframes wallpaperScroll { to { transform: translate(72px, 72px); } }
+    @keyframes ambientGlow { to { filter: hue-rotate(15deg) saturate(1.1); } }
+    @media (prefers-reduced-motion: reduce) {
+      body::before, body::after, .ticker-wrap span { animation: none !important; }
+    }
+
+    .ticker-bar {
+      background: var(--emerald);
+      color: #fff8e8;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 0;
+      overflow: hidden;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--gold-dark);
+      display: flex;
+    }
+    .ticker-wrap {
+      display: inline-block;
+      padding-left: 100%;
+      animation: tickerRoll 35s linear infinite;
+    }
+    @keyframes tickerRoll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+    header {
+      background: rgba(255, 250, 240, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--gold-border);
+      padding: 12px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font: 700 20px Georgia, serif; box-shadow: 0 4px 12px rgba(179, 130, 38, 0.3);
+    }
+    .brand-title { font: 700 22px Georgia, serif; color: var(--gold-dark); line-height: 1.1; }
+    .brand-sub { font-size: 11px; color: var(--mute); letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+    .header-actions { display: flex; align-items: center; gap: 14px; }
+
+    .app-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      max-width: 1440px;
+      margin: 18px auto;
+      padding: 0 24px 48px;
+    }
+
+    aside {
+      position: sticky;
+      top: 76px;
+      align-self: start;
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius);
+      padding: 16px 12px;
+      box-shadow: var(--shadow);
+    }
+    .nav-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--mute);
+      margin: 14px 10px 6px; font-weight: 700;
+    }
+    .nav-btn {
+      width: 100%; text-align: left; padding: 10px 14px; margin-bottom: 4px;
+      border: 0; border-radius: 12px; background: transparent; color: var(--ink);
+      font: 500 14px inherit; cursor: pointer; display: flex; align-items: center; gap: 10px;
+      transition: all 0.18s ease;
+    }
+    .nav-btn:hover { background: var(--cream); color: var(--gold-dark); }
+    .nav-btn.active {
+      background: var(--emerald); color: #fff; font-weight: 600;
+      box-shadow: 0 4px 14px rgba(24, 92, 64, 0.25);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .card-hero {
+      background: linear-gradient(135deg, #fff7e4 0%, #fae6de 100%);
+      border: 1px solid var(--gold-light);
+    }
+    h2 { font: 600 26px Georgia, serif; margin: 0 0 6px; color: var(--ink); }
+    h3 { font: 600 19px Georgia, serif; margin: 0 0 14px; color: var(--gold-dark); display: flex; align-items: center; justify-content: space-between; }
+    p { margin: 0 0 10px; }
+
+    .tag {
+      display: inline-flex; align-items: center; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.8px; padding: 3px 10px; border-radius: 99px; border: 1px solid;
+    }
+    .tag.actual { background: var(--emerald-bg); color: var(--emerald-dark); border-color: var(--emerald); }
+    .tag.calculated { background: #fdf5e0; color: var(--gold-dark); border-color: var(--gold); }
+    .tag.forecast { background: #fbeee8; color: var(--blush-dark); border: 1px dashed var(--blush-dark); }
+    .tag.warning { background: #fff0ed; color: var(--danger); border-color: var(--danger); }
+
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+    .grid-2 { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
+    .grid-3 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); }
+
+    .kpi-tile {
+      background: rgba(255, 255, 255, 0.75); border: 1px solid var(--gold-light);
+      border-radius: 14px; padding: 16px; position: relative;
+    }
+    .kpi-name { font-size: 13px; color: var(--mute); font-weight: 500; display: block; margin-top: 6px; }
+    .kpi-val { font: 700 24px Georgia, serif; color: var(--ink); margin-top: 4px; display: block; }
+
+    label { display: block; font-size: 13px; font-weight: 600; color: var(--mute); margin-top: 10px; margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%; padding: 10px 14px; border: 1px solid var(--gold-border); border-radius: 10px;
+      background: #fff; font: inherit; color: var(--ink);
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--gold-dark); box-shadow: 0 0 0 3px rgba(179, 130, 38, 0.15);
+    }
+    .btn {
+      background: var(--emerald); color: #fff; border: 0; border-radius: 99px;
+      padding: 10px 22px; font: 600 14px inherit; cursor: pointer; display: inline-flex;
+      align-items: center; gap: 8px; transition: all 0.15s ease; margin-top: 10px;
+    }
+    .btn:hover { background: var(--emerald-dark); transform: translateY(-1px); }
+    .btn-gold { background: var(--gold); }
+    .btn-gold:hover { background: var(--gold-dark); }
+    .btn-outline { background: transparent; border: 1px solid var(--gold-dark); color: var(--gold-dark); }
+    .btn-outline:hover { background: var(--cream); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 10px; }
+    th { text-align: left; padding: 10px; background: #f9f1df; border-bottom: 2px solid var(--gold-border); color: var(--gold-dark); font-weight: 600; }
+    td { padding: 10px; border-bottom: 1px solid #ebdcc1; vertical-align: middle; }
+    tr:hover td { background: rgba(255, 255, 255, 0.6); }
+
+    .agent-row { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #ebdcbc; }
+    .agent-row:last-child { border: 0; }
+    .agent-avatar {
+      width: 38px; height: 38px; border-radius: 50%; background: var(--cream);
+      border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    .out-box {
+      background: #fff; border: 1px solid var(--gold-light); border-radius: 12px;
+      padding: 14px; margin-top: 12px; font-family: Consolas, monospace; font-size: 13px;
+      white-space: pre-wrap; max-height: 280px; overflow-y: auto; color: var(--ink-light);
+    }
+
+    .chat-container {
+      height: 380px; overflow-y: auto; background: #fff; border: 1px solid var(--gold-border);
+      border-radius: 14px; padding: 16px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .msg-user {
+      align-self: flex-end; background: var(--emerald-bg); color: var(--emerald-dark);
+      padding: 10px 16px; border-radius: 14px 14px 2px 14px; max-width: 80%; border: 1px solid var(--emerald);
+    }
+    .msg-bot {
+      align-self: flex-start; background: #fffaf0; color: var(--ink); padding: 12px 18px;
+      border-radius: 14px 14px 14px 2px; max-width: 85%; border: 1px solid var(--gold-border);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .chat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .chip {
+      background: var(--cream); border: 1px solid var(--gold-border); padding: 4px 12px;
+      border-radius: 99px; font-size: 12px; cursor: pointer; color: var(--gold-dark); font-weight: 500;
+    }
+    .chip:hover { background: var(--gold); color: #fff; }
+
+    .pane { display: none; }
+    .pane.active { display: block; }
+    .disclaimer-bar {
+      font-size: 12px; color: var(--mute); padding: 10px 14px; background: rgba(255, 250, 240, 0.9);
+      border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; margin-top: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .app-layout { grid-template-columns: 1fr; }
+      aside { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
+      .nav-label { width: 100%; }
+      .nav-btn { width: auto; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ticker-bar" aria-hidden="true">
+    <div class="ticker-wrap" id="marquee-text">
+      ✨ ORACLE AI Suite · Gold: Spot Trading · Silver: Spot · Stock Outlook Engine Online · International Cricket: Win Probability Engine Active · Data Kind Verified: Actual | Calculated | Estimate | Forecast · SEBI/SEC Compliant Backtesting
+    </div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">Ω</div>
+      <div>
+        <div class="brand-title">ORACLE</div>
+        <div class="brand-sub">Decision Intelligence &amp; Prediction SaaS</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="tag actual" id="ws-indicator">Synthetic Demo Workspace</span>
+      <span class="tag calculated" id="role-badge">Role: Owner</span>
+      <button class="btn btn-outline" style="margin:0; padding:6px 14px; font-size:12px;" onclick="resetDemo()">Reload Demo</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <aside>
+      <div class="nav-label">Core SaaS</div>
+      <button class="nav-btn active" data-target="dashboard">📊 Executive Dashboard</button>
+      <button class="nav-btn" data-target="agents">🤖 AI Specialist Agents</button>
+      <button class="nav-btn" data-target="datahub">📁 Ingestion &amp; Data Hub</button>
+      <button class="nav-btn" data-target="inventory">📦 Demand &amp; Inventory</button>
+
+      <div class="nav-label">Finance &amp; Markets</div>
+      <button class="nav-btn" data-target="calculators">💰 Wealth &amp; Calculators</button>
+      <button class="nav-btn" data-target="markets">📈 Markets, IPOs &amp; Paper</button>
+      <button class="nav-btn" data-target="cricket">🏏 International Cricket</button>
+
+      <div class="nav-label">Automations &amp; Admin</div>
+      <button class="nav-btn" data-target="chat">💬 Grounded AI Assistant</button>
+      <button class="nav-btn" data-target="automations">⚡ Automations &amp; Approvals</button>
+      <button class="nav-btn" data-target="workspace">⚙️ Workspace &amp; Billing</button>
+    </aside>
+
+    <main>
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="pane active">
+        <div class="card card-hero">
+          <h2>Executive Business Intelligence &amp; Forecasts</h2>
+          <p>Multi-agent forecasting across sales, margins, and cash runway with honest uncertainty calibration.</p>
+          <div style="margin-top: 8px;">
+            <span class="tag actual" id="data-status-tag">Status: Initialized</span>
+            <span class="tag calculated" id="health-tag">Data Health: 100/100</span>
+          </div>
+        </div>
+
+        <div class="grid" id="kpi-grid"></div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3>
+            <span>Revenue Trajectory &amp; 6-Month Predictive Horizon</span>
+            <span class="tag forecast" id="model-name-badge">Model: Auto</span>
+          </h3>
+          <div id="chart-container" style="min-height: 250px;"></div>
+          <div class="disclaimer-bar" id="chart-disclaimer">
+            Loading forecast calibration metrics...
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Model Backtesting Leaderboard</h3>
+            <p style="font-size:13px; color:var(--mute)">Errors measured against Naive Last-Known-Value Baseline across out-of-sample walk-forward folds.</p>
+            <div id="models-table"></div>
+          </div>
+          <div class="card">
+            <h3>Quick Executive Actions</h3>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn" onclick="switchTab('datahub')">📤 Upload Fresh CSV / Excel Data</button>
+              <button class="btn btn-gold" onclick="switchTab('inventory')">📦 Inspect SKU Reorder Points</button>
+              <button class="btn btn-outline" onclick="switchTab('chat')">💬 Ask AI Grounded Assistant</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AGENTS -->
+      <section id="agents" class="pane">
+        <div class="card">
+          <h2>Specialized Autonomous AI Agents</h2>
+          <p>Every recommendation is deterministically computed from ledger evidence and tagged with its evidence source.</p>
+          <div id="agent-list" style="margin-top: 16px;"></div>
+        </div>
+      </section>
+
+      <!-- DATA HUB -->
+      <section id="datahub" class="pane">
+        <div class="grid-2">
+          <div class="card">
+            <h3>Upload Business Records</h3>
+            <p style="font-size:13px; color:var(--mute)">Supports CSV and Excel (.xlsx) formats. Required: Date, Revenue (Optional: Expenses, Orders).</p>
+            <input type="file" id="file-input" accept=".csv, .xlsx" style="margin-bottom:12px;">
+            <button class="btn" onclick="handleFileUpload()">Upload &amp; Analyze Dataset</button>
+            <div class="out-box" id="upload-status">Ready to accept data files.</div>
+          </div>
+
+          <div class="card">
+            <h3>Manual Data Entry</h3>
+            <p style="font-size:13px; color:var(--mute)">Append a single monthly closing record directly to the current workspace dataset.</p>
+            <label>Date (YYYY-MM-DD)<input type="date" id="man-date"></label>
+            <label>Monthly Revenue (₹)<input type="number" id="man-rev" placeholder="e.g. 150000"></label>
+            <label>Monthly Expenses (₹)<input type="number" id="man-exp" placeholder="e.g. 95000"></label>
+            <button class="btn btn-gold" onclick="addManualRecord()">Append Record</button>
+            <div class="out-box" id="manual-status">Enter values to update trajectory.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Automated Data Health Audit Scorecard</h3>
+          <div id="health-breakdown"></div>
+        </div>
+      </section>
+
+      <!-- INVENTORY -->
+      <section id="inventory" class="pane">
+        <div class="card">
+          <h2>Multi-SKU Demand &amp; Economic Order Quantity (EOQ)</h2>
+          <p>Computes Safety Stock, Reorder Point (ROP) and Stockout Risk rating based on lead times and sales velocity.</p>
+          <div id="inventory-table-container"></div>
+          <div class="disclaimer-bar">
+            Safety buffer incorporates lead time demand variability. Adjust holding costs in settings if storage costs fluctuate.
+          </div>
+        </div>
+      </section>
+
+      <!-- CALCULATORS -->
+      <section id="calculators" class="pane">
+        <h2>Deterministic Financial Intelligence &amp; Calculators</h2>
+        <p>Transparent mathematics with no hidden fees or inflated returns. Every calculation states its underlying assumptions.</p>
+
+        <div class="grid-3" style="margin-top: 16px;">
+          <div class="card">
+            <h3>SIP / Step-up Wealth Planner</h3>
+            <label>Monthly Investment (₹)<input id="c-sip-m" type="number" value="10000"></label>
+            <label>Expected Return (% p.a.)<input id="c-sip-r" type="number" value="12"></label>
+            <label>Tenure (Years)<input id="c-sip-y" type="number" value="10"></label>
+            <label>Annual Step-up (% Optional)<input id="c-sip-step" type="number" value="10"></label>
+            <button class="btn" onclick="calcSip()">Compute Projections</button>
+            <div class="out-box" id="c-sip-out"></div>
+          </div>
+
+          <div class="card">
+            <h3>SWP Retirement Planner</h3>
+            <label>Initial Corpus (₹)<input id="c-swp-c" type="number" value="5000000"></label>
+            <label>Monthly Withdrawal (₹)<input id="c-swp-w" type="number" value="35000"></label>
+            <label>Return (% p.a.)<input id="c-swp-r" type="number" value="8.5"></label>
+            <label>Tenure (Years)<input id="c-swp-y" type="number" value="15"></label>
+            <button class="btn" onclick="calcSwp()">Analyze Corpus Depletion</button>
+            <div class="out-box" id="c-swp-out"></div>
+          </div>
+
+          <div class="card">
+            <h3>LIC &amp; Policy IRR Evaluator</h3>
+            <label>Annual Premium (₹)<input id="c-lic-p" type="number" value="50000"></label>
+            <label>Premium Paying Years<input id="c-lic-py" type="number" value="15"></label>
+            <label>Total Policy Term (Years)<input id="c-lic-ty" type="number" value="25"></label>
+            <label>Maturity Amount (from policy illustration) ₹<input id="c-lic-m" type="number" value="1400000"></label>
+            <button class="btn" onclick="calcLic()">Calculate Real IRR</button>
+            <div class="out-box" id="c-lic-out"></div>
+            <div class="disclaimer-bar" style="margin-top:8px;">
+              Maturity amount MUST be from your official policy illustration. Bonuses are not guaranteed by any government authority.
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Fixed Deposit (FD)</h3>
+            <label>Principal Deposit (₹)<input id="c-fd-p" type="number" value="200000"></label>
+            <label>Annual Interest Rate (%)<input id="c-fd-r" type="number" value="7.25"></label>
+            <label>Period (Years)<input id="c-fd-y" type="number" value="5"></label>
+            <button class="btn" onclick="calcFd()">Calculate FD Returns</button>
+            <div class="out-box" id="c-fd-out"></div>
+          </div>
+
+          <div class="card">
+            <h3>GST-Ready Invoice Calculator</h3>
+            <label>Taxable Value (₹)<input id="c-gst-a" type="number" value="100000"></label>
+            <label>GST Slab (%)
+              <select id="c-gst-r">
+                <option value="5">5% (Essential Goods)</option>
+                <option value="12">12% (Processed Products)</option>
+                <option value="18" selected>18% (Standard Services/IT)</option>
+                <option value="28">28% (Luxury / Automobiles)</option>
+              </select>
+            </label>
+            <label><input type="checkbox" id="c-gst-inter" style="width:auto; margin-right:6px;"> Interstate Supply (IGST)</label>
+            <button class="btn" onclick="calcGst()">Generate Tax Breakdown</button>
+            <div class="out-box" id="c-gst-out"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MARKETS -->
+      <section id="markets" class="pane">
+        <h2>Live Commodity &amp; Financial Markets</h2>
+        <p>Official market rates with provider verification. Paper trading with capital preservation rules and kill-switch safeguards.</p>
+
+        <div class="grid-3" style="margin-top:16px;">
+          <div class="card">
+            <h3>Gold &amp; Silver Spot</h3>
+            <div style="display:flex; gap:10px;">
+              <button class="btn" onclick="fetchQuote('gold')">Gold (XAU)</button>
+              <button class="btn btn-gold" onclick="fetchQuote('silver')">Silver (XAG)</button>
+            </div>
+            <div class="out-box" id="metal-out">Click above to query live quotes via configured provider.</div>
+          </div>
+
+          <div class="card">
+            <h3>Stock Outlook &amp; Backtest</h3>
+            <label>Ticker Symbol (e.g. RELIANCE.BSE, IBM, AAPL)<input id="mkt-sym" value="IBM"></label>
+            <div style="display:flex; gap:10px;">
+              <button class="btn" onclick="fetchQuote('stock')">Quote</button>
+              <button class="btn btn-gold" onclick="fetchStockForecast()">5-Day Outlook</button>
+            </div>
+            <div class="out-box" id="stock-out">Requires free API key in .env. Never fabricated.</div>
+          </div>
+
+          <div class="card">
+            <h3>IPO Tracker Pipeline</h3>
+            <button class="btn btn-outline" onclick="fetchIpos()">Refresh Filings</button>
+            <div class="out-box" id="ipo-out">Official BSE/NSE pipeline radar.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Virtual Paper Trading Terminal (Capital Preservation Simulator)</h3>
+          <p style="font-size:13px; color:var(--mute)">Starting Capital: ₹10,00,000. Risk rules: Max 35% position limit. 5% daily drawdown kill-switch stops rogue trades.</p>
+          <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+            <div><label>Symbol<input id="pt-sym" value="TCS.BSE"></label></div>
+            <div><label>Price (₹)<input id="pt-prc" type="number" value="3850"></label></div>
+            <div><label>Shares<input id="pt-qty" type="number" value="20"></label></div>
+            <div style="display:flex; gap:8px; align-items:flex-end;">
+              <button class="btn" style="margin:0; width:50%;" onclick="executePaperTrade('buy')">BUY</button>
+              <button class="btn btn-gold" style="margin:0; width:50%;" onclick="executePaperTrade('sell')">SELL</button>
+            </div>
+          </div>
+          <div class="out-box" id="pt-out" style="margin-top:14px;">Loading virtual portfolio summary...</div>
+        </div>
+      </section>
+
+      <!-- CRICKET -->
+      <section id="cricket" class="pane">
+        <h2>International Cricket Intelligence</h2>
+        <p>Live matches, Duckworth-Lewis-Stern chase dynamics and statistical match outcome probabilities.</p>
+
+        <div class="grid-2" style="margin-top:16px;">
+          <div class="card">
+            <h3>Live &amp; Recent International Matches</h3>
+            <button class="btn" onclick="fetchCricketMatches()">Fetch Live Matches</button>
+            <div class="out-box" id="cricket-matches-out">Connect free CRICAPI_KEY in .env for real-time live ball-by-ball scores.</div>
+          </div>
+
+          <div class="card">
+            <h3>DLS &amp; Win Probability Simulator</h3>
+            <label>Format
+              <select id="cr-fmt"><option value="T20">T20 International</option><option value="ODI">ODI (50 Overs)</option></select>
+            </label>
+            <div class="grid-2">
+              <div><label>Defending Team<input id="cr-t1" value="India"></label></div>
+              <div><label>Chasing Team<input id="cr-t2" value="Australia"></label></div>
+            </div>
+            <div class="grid" style="grid-template-columns:repeat(4,1fr);">
+              <div><label>Target<input id="cr-tgt" type="number" value="185"></label></div>
+              <div><label>Current Score<input id="cr-cur" type="number" value="122"></label></div>
+              <div><label>Wickets Down<input id="cr-wkt" type="number" value="3"></label></div>
+              <div><label>Overs Bowled<input id="cr-ov" type="number" step="0.1" value="14.2"></label></div>
+            </div>
+            <button class="btn btn-gold" onclick="simulateCricketMatch()">Compute Win Probability</button>
+            <div class="out-box" id="cricket-sim-out">Probabilities update instantly using phase-resource curves.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHAT -->
+      <section id="chat" class="pane">
+        <div class="card">
+          <h2>Grounded Decision Intelligence Chatbot</h2>
+          <p>Answers strictly from your workspace data, deterministic formulas, and live configured market feeds. Zero hallucinations.</p>
+
+          <div class="chat-chips">
+            <span class="chip" onclick="quickChat('forecast')">📈 6-Month Sales Forecast</span>
+            <span class="chip" onclick="quickChat('data quality')">🛡️ Data Quality Audit</span>
+            <span class="chip" onclick="quickChat('inventory')">📦 Inventory Reorder Status</span>
+            <span class="chip" onclick="quickChat('sip 10000 12 10')">💰 SIP ₹10k for 10y at 12%</span>
+            <span class="chip" onclick="quickChat('gold price')">🥇 Live Gold Price</span>
+            <span class="chip" onclick="quickChat('cricket')">🏏 Cricket Score Tracker</span>
+          </div>
+
+          <div class="chat-container" id="chat-messages">
+            <div class="msg-bot">
+              Welcome to ORACLE. I am your grounded decision assistant. Ask me about your business forecast, cash burn, inventory safety stock, or financial calculations like SIP, SWP and LIC.
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <input id="chat-input" placeholder="Type your business or financial question here..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+            <button class="btn" style="margin:0;" onclick="sendChatMessage()">Send</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- AUTOMATIONS -->
+      <section id="automations" class="pane">
+        <h2>Autonomous Action Engine &amp; Approval Queue</h2>
+        <p>Human-in-the-loop autonomous safeguards. Critical procurement orders, financial reallocations and supplier flags require approval.</p>
+
+        <div class="grid-2" style="margin-top:16px;">
+          <div class="card">
+            <h3>Pending Automation Queue</h3>
+            <div id="automations-queue-list">Loading queue...</div>
+          </div>
+
+          <div class="card">
+            <h3>Active System Rules</h3>
+            <div id="automations-rules-list">Loading triggers...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- WORKSPACE -->
+      <section id="workspace" class="pane">
+        <h2>Workspaces, Roles &amp; Subscription Tier</h2>
+        <p>Enterprise multi-tenancy with Role-Based Access Control (Owner, Analyst, Viewer) and verifiable audit logs.</p>
+
+        <div class="grid-2" style="margin-top:16px;">
+          <div class="card">
+            <h3>User Authentication</h3>
+            <label>Work Email<input id="auth-email" type="email" placeholder="founder@company.com"></label>
+            <label>Password (8+ chars)<input id="auth-pwd" type="password"></label>
+            <div style="display:flex; gap:10px;">
+              <button class="btn" onclick="submitAuth('login')">Sign In</button>
+              <button class="btn btn-gold" onclick="submitAuth('register')">Create Workspace</button>
+            </div>
+            <div class="out-box" id="auth-out">Currently running in local sandbox session.</div>
+          </div>
+
+          <div class="card">
+            <h3>Subscription Plan</h3>
+            <div id="subscription-plans-container">Loading plans...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Workspace Audit Trail</h3>
+          <p style="font-size:13px; color:var(--mute)">Immutable log of all dataset ingestion, model updates, and configuration actions.</p>
+          <div id="audit-trail-container"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+    const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+    function switchTab(targetId) {
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      const p = document.getElementById(targetId);
+      if (p) p.classList.add('active');
+      const b = document.querySelector(`.nav-btn[data-target="${targetId}"]`);
+      if (b) b.classList.add('active');
+    }
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.onclick = () => switchTab(btn.dataset.target);
+    });
+
+    async function api(path, body = null, method = null) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (localStorage.getItem('oracle_token')) {
+        headers['Authorization'] = 'Bearer ' + localStorage.getItem('oracle_token');
+      }
+      const m = method || (body ? 'POST' : 'GET');
+      const res = await fetch('/api/' + path, {
+        method: m,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.detail || ('HTTP ' + res.status));
+      return data;
+    }
+
+    function renderSvgChart(history, forecast) {
+      const allVals = [...history, ...forecast.lo, ...forecast.hi];
+      const maxVal = Math.max(...allVals);
+      const minVal = Math.min(...allVals);
+      const totalPoints = history.length + forecast.mean.length;
+      const W = 720, H = 260;
+      const getX = i => 40 + i * (W - 60) / (totalPoints - 1);
+      const getY = v => H - 30 - ((v - minVal) / (maxVal - minVal || 1)) * (H - 50);
+
+      const histLine = history.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
+      const L = history.length;
+      const fcLine = [history[L - 1], ...forecast.mean].map((v, i) => `${getX(L - 1 + i)},${getY(v)}`).join(' ');
+
+      const bandTop = forecast.hi.map((v, i) => `${getX(L + i)},${getY(v)}`);
+      const bandBottom = forecast.lo.map((v, i) => `${getX(L + i)},${getY(v)}`).reverse();
+      const polygonPoints = [...bandTop, ...bandBottom].join(' ');
+
+      return `
+        <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue history and forecast band">
+          <defs>
+            <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f4d3c6" stop-opacity="0.8"/>
+              <stop offset="100%" stop-color="#f4d3c6" stop-opacity="0.3"/>
+            </linearGradient>
+          </defs>
+          <line x1="40" y1="20" x2="${W - 20}" y2="20" stroke="#ebdcc1" stroke-dasharray="3 3"/>
+          <line x1="40" y1="${H / 2}" x2="${W - 20}" y2="${H / 2}" stroke="#ebdcc1" stroke-dasharray="3 3"/>
+          <line x1="40" y1="${H - 30}" x2="${W - 20}" y2="${H - 30}" stroke="#ebdcc1"/>
+
+          <polygon points="${polygonPoints}" fill="url(#bandGrad)" />
+          <polyline points="${histLine}" fill="none" stroke="#185c40" stroke-width="3" stroke-linecap="round"/>
+          <polyline points="${fcLine}" fill="none" stroke="#a84e37" stroke-width="3" stroke-dasharray="7 5" stroke-linecap="round"/>
+
+          <text x="40" y="16" font-size="11" fill="#786551" font-weight="600">${inr(maxVal)}</text>
+          <text x="40" y="${H - 34}" font-size="11" fill="#786551" font-weight="600">${inr(minVal)}</text>
+          <text x="${W - 130}" y="20" font-size="11" fill="#a84e37" font-weight="600">80% Range Band</text>
+        </svg>
+      `;
+    }
+
+    function renderDashboard(d) {
+      $('#ws-indicator').textContent = d.label;
+      if (d.data_health) {
+        $('#health-tag').textContent = `Health: ${d.data_health.score}/100 (${d.data_health.status})`;
+      }
+
+      $('#kpi-grid').innerHTML = d.kpis.map(k => `
+        <div class="kpi-tile">
+          <span class="tag ${k.kind}">${k.kind}</span>
+          <span class="kpi-name">${esc(k.name)}</span>
+          <span class="kpi-val">${k.unit === '%' ? k.value + '%' : (k.unit === 'months' ? k.value + ' mo' : inr(k.value))}</span>
+        </div>
+      `).join('');
+
+      $('#chart-container').innerHTML = renderSvgChart(d.history, d.forecast);
+      const f = d.forecast;
+      $('#model-name-badge').textContent = `Selected: ${f.model} (Skill: ${(f.skill_vs_naive * 100).toFixed(0)}% vs Baseline)`;
+      $('#chart-disclaimer').textContent = `Green = Verified History. Orange Dashed = Forecast (${f.model}). Shaded Band = ${f.interval} Folds evaluated: ${f.folds}. ${f.disclaimer}`;
+
+      let rows = '';
+      for (const [mName, mae] of Object.entries(f.backtest_mae)) {
+        const isBest = mName === f.model;
+        rows += `
+          <tr>
+            <td><b>${esc(mName)}</b> ${isBest ? '<span class="tag actual" style="font-size:10px;">Champion</span>' : ''}</td>
+            <td>₹${mae.toLocaleString('en-IN')}</td>
+            <td>${isBest && f.beats_baseline ? '<span style="color:var(--emerald); font-weight:600;">✓ Beats Baseline</span>' : 'Standard'}</td>
+          </tr>
+        `;
+      }
+      $('#models-table').innerHTML = `
+        <table>
+          <thead><tr><th>Model Engine</th><th>Backtest MAE</th><th>Evaluation</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      $('#agent-list').innerHTML = d.agents.map(a => `
+        <div class="agent-row">
+          <div class="agent-avatar">🤖</div>
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <b>${esc(a.agent)}</b>
+              <span class="tag ${a.kind}">${a.kind}</span>
+            </div>
+            <div style="margin-top:4px; font-size:14px; color:var(--ink-light);">${esc(a.text)}</div>
+          </div>
+        </div>
+      `).join('');
+
+      if (d.data_health) {
+        $('#health-breakdown').innerHTML = `
+          <div style="font-size:15px; margin-bottom:10px;">
+            Overall Quality Score: <b>${d.data_health.score}/100</b> (${d.data_health.status})
+          </div>
+          <ul>
+            ${d.data_health.checks.map(c => `<li style="margin-bottom:6px;">${esc(c)}</li>`).join('')}
+          </ul>
+        `;
+      }
+
+      if (d.inventory) {
+        renderInventory(d.inventory);
+      }
+    }
+
+    function renderInventory(items) {
+      let r = '';
+      for (const it of items) {
+        const isRisk = it.stockout_risk.includes('HIGH');
+        r += `
+          <tr>
+            <td><b>${esc(it.sku)}</b><br><small style="color:var(--mute)">${esc(it.name)}</small></td>
+            <td><b>${it.current_stock}</b> units (${it.days_of_stock} days)</td>
+            <td>${it.reorder_point}</td>
+            <td>${it.recommended_order_quantity_eoq}</td>
+            <td><span class="tag ${isRisk ? 'warning' : 'actual'}">${esc(it.stockout_risk)}</span></td>
+          </tr>
+        `;
+      }
+      $('#inventory-table-container').innerHTML = `
+        <table>
+          <thead><tr><th>SKU &amp; Product</th><th>Current Stock</th><th>Reorder Point</th><th>EOQ Recommended</th><th>Stockout Risk</th></tr></thead>
+          <tbody>${r}</tbody>
+        </table>
+      `;
+    }
+
+    async function loadData() {
+      try {
+        const d = localStorage.getItem('oracle_token') ? await api('dashboard') : await api('demo');
+        renderDashboard(d);
+      } catch (e) {
+        localStorage.removeItem('oracle_token');
+        const d = await api('demo');
+        renderDashboard(d);
+      }
+      loadPlans();
+      loadAutomations();
+      fetchPaperTrading();
+    }
+
+    function resetDemo() {
+      localStorage.removeItem('oracle_token');
+      loadData();
+    }
+
+    async function calcSip() {
+      try {
+        const m = +$('#c-sip-m').value, r = +$('#c-sip-r').value, y = +$('#c-sip-y').value, s = +$('#c-sip-step').value;
+        const res = await api('calc/sip', { monthly: m, annual_pct: r, years: y, step_up_pct: s });
+        $('#c-sip-out').textContent = `Total Invested: ${inr(res.invested)}\nEstimated Value: ${inr(res.value)}\nTotal Gain: ${inr(res.gain)}\n\nAssumption: ${res.assumption}`;
+      } catch (e) { $('#c-sip-out').textContent = e.message; }
+    }
+
+    async function calcSwp() {
+      try {
+        const c = +$('#c-swp-c').value, w = +$('#c-swp-w').value, r = +$('#c-swp-r').value, y = +$('#c-swp-y').value;
+        const res = await api('calc/swp', { corpus: c, monthly: w, annual_pct: r, years: y });
+        $('#c-swp-out').textContent = `Ending Balance: ${inr(res.ending)}\n` +
+          (res.depleted_month ? `⚠️ Corpus depleted in Month ${res.depleted_month}!` : `✓ Corpus remains solvent over tenure.`) +
+          `\n\nAssumption: ${res.assumption}`;
+      } catch (e) { $('#c-swp-out').textContent = e.message; }
+    }
+
+    async function calcLic() {
+      try {
+        const p = +$('#c-lic-p').value, py = +$('#c-lic-py').value, ty = +$('#c-lic-ty').value, m = +$('#c-lic-m').value;
+        const res = await api('calc/lic', { annual_premium: p, premium_years: py, term_years: ty, maturity_amount: m });
+        let txt = `Total Premium Paid: ${inr(res.total_premium)}\nGuaranteed/Entered Maturity: ${inr(res.maturity)}\nCalculated Internal Rate of Return (IRR): ${res.effective_return_pct}%\n\n`;
+        if (res.same_premiums_if_invested_at) {
+          txt += `Same premiums invested in balanced index (12% CAGR): ${inr(res.same_premiums_if_invested_at['12%'])}\n`;
+        }
+        txt += `\nVerification Note: ${res.assumption}`;
+        $('#c-lic-out').textContent = txt;
+      } catch (e) { $('#c-lic-out').textContent = e.message; }
+    }
+
+    async function calcFd() {
+      try {
+        const p = +$('#c-fd-p').value, r = +$('#c-fd-r').value, y = +$('#c-fd-y').value;
+        const res = await api('calc/fd', { principal: p, annual_pct: r, years: y });
+        $('#c-fd-out').textContent = `Maturity Value: ${inr(res.maturity_value)}\nInterest Earned: ${inr(res.interest_earned)}\nCompounding: ${res.compounding}`;
+      } catch (e) { $('#c-fd-out').textContent = e.message; }
+    }
+
+    async function calcGst() {
+      try {
+        const a = +$('#c-gst-a').value, r = +$('#c-gst-r').value, inter = $('#c-gst-inter').checked;
+        const res = await api('calc/gst', { items: [{ unit_price: a, quantity: 1 }], gst_rate: r, is_interstate: inter });
+        $('#c-gst-out').textContent = `Taxable Subtotal: ${inr(res.subtotal)}\nGST (${res.gst_rate_pct}%): ${inr(res.tax_amount)}\n` +
+          (inter ? `IGST: ${inr(res.igst)}` : `CGST: ${inr(res.cgst)} | SGST: ${inr(res.sgst)}`) +
+          `\nTotal Invoice Payable: ${inr(res.total_amount)}`;
+      } catch (e) { $('#c-gst-out').textContent = e.message; }
+    }
+
+    async function fetchQuote(kind) {
+      const sym = $('#mkt-sym').value.trim();
+      const out = kind === 'stock' ? $('#stock-out') : $('#metal-out');
+      try {
+        const res = await api(`market/quote?kind=${kind}&symbol=${encodeURIComponent(sym)}`);
+        out.textContent = JSON.stringify(res, null, 2);
+      } catch (e) { out.textContent = e.message; }
+    }
+
+    async function fetchStockForecast() {
+      const sym = $('#mkt-sym').value.trim();
+      try {
+        const res = await api(`market/forecast?symbol=${encodeURIComponent(sym)}`);
+        $('#stock-out').textContent = JSON.stringify(res, null, 2);
+      } catch (e) { $('#stock-out').textContent = e.message; }
+    }
+
+    async function fetchIpos() {
+      try {
+        const res = await api('market/ipos');
+        $('#ipo-out').textContent = JSON.stringify(res, null, 2);
+      } catch (e) { $('#ipo-out').textContent = e.message; }
+    }
+
+    async function fetchPaperTrading() {
+      try {
+        const res = await api('market/paper-trade', { action: 'summary' });
+        $('#pt-out').textContent = JSON.stringify(res, null, 2);
+      } catch (e) { $('#pt-out').textContent = e.message; }
+    }
+
+    async function executePaperTrade(action) {
+      try {
+        const sym = $('#pt-sym').value.trim();
+        const prc = +$('#pt-prc').value;
+        const qty = +$('#pt-qty').value;
+        const res = await api('market/paper-trade', { symbol: sym, action, shares: qty, price: prc });
+        fetchPaperTrading();
+      } catch (e) { $('#pt-out').textContent = e.message; }
+    }
+
+    async function fetchCricketMatches() {
+      try {
+        const res = await api('cricket');
+        $('#cricket-matches-out').textContent = JSON.stringify(res, null, 2);
+      } catch (e) { $('#cricket-matches-out').textContent = e.message; }
+    }
+
+    async function simulateCricketMatch() {
+      try {
+        const res = await api('cricket/simulate', {
+          team1: $('#cr-t1').value,
+          team2: $('#cr-t2').value,
+          format: $('#cr-fmt').value,
+          target: +$('#cr-tgt').value,
+          current_runs: +$('#cr-cur').value,
+          wickets_down: +$('#cr-wkt').value,
+          overs_completed: +$('#cr-ov').value
+        });
+        $('#cricket-sim-out').textContent = JSON.stringify(res, null, 2);
+      } catch (e) { $('#cricket-sim-out').textContent = e.message; }
+    }
+
+    async function sendChatMessage() {
+      const inp = $('#chat-input');
+      const msg = inp.value.trim();
+      if (!msg) return;
+      inp.value = '';
+
+      const log = $('#chat-messages');
+      log.insertAdjacentHTML('beforeend', `<div class="msg-user">${esc(msg)}</div>`);
+      log.scrollTop = log.scrollHeight;
+
+      try {
+        const res = await api('chat', { message: msg });
+        log.insertAdjacentHTML('beforeend', `<div class="msg-bot">${esc(res.reply)}</div>`);
+      } catch (e) {
+        log.insertAdjacentHTML('beforeend', `<div class="msg-bot" style="color:var(--danger)">Error: ${esc(e.message)}</div>`);
+      }
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function quickChat(q) {
+      $('#chat-input').value = q;
+      sendChatMessage();
+    }
+
+    async function handleFileUpload() {
+      const fl = $('#file-input').files[0];
+      if (!fl) { $('#upload-status').textContent = 'Please choose a CSV or Excel file first.'; return; }
+      $('#upload-status').textContent = 'Reading and validating file...';
+
+      if (fl.name.endsWith('.xlsx')) {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const b64 = btoa(new Uint8Array(reader.result).reduce((d, b) => d + String.fromCharCode(b), ''));
+          try {
+            await api('upload', { name: fl.name, base64_xlsx: b64 });
+            $('#upload-status').textContent = 'Excel file successfully ingested and validated!';
+            loadData();
+          } catch (e) { $('#upload-status').textContent = e.message; }
+        };
+        reader.readAsArrayBuffer(fl);
+      } else {
+        const text = await fl.text();
+        try {
+          await api('upload', { name: fl.name, csv: text });
+          $('#upload-status').textContent = 'CSV dataset successfully ingested and analyzed!';
+          loadData();
+        } catch (e) { $('#upload-status').textContent = e.message; }
+      }
+    }
+
+    async function addManualRecord() {
+      const dt = $('#man-date').value;
+      const rev = +$('#man-rev').value;
+      const exp = +$('#man-exp').value;
+      if (!dt || !rev) { $('#manual-status').textContent = 'Date and Revenue are required.'; return; }
+      const line = `\n${dt},${rev},${exp || 0}`;
+      try {
+        await api('upload', { name: 'manual_entry.csv', csv: `date,revenue,expenses${line}` });
+        $('#manual-status').textContent = 'Appended record successfully!';
+        loadData();
+      } catch (e) { $('#manual-status').textContent = e.message; }
+    }
+
+    async function loadAutomations() {
+      try {
+        const q = await api('automations/queue');
+        let html = '';
+        for (const act of q.pending_actions) {
+          html += `
+            <div style="padding:10px; background:#fff; border:1px solid var(--gold-border); border-radius:10px; margin-bottom:10px;">
+              <b>${esc(act.title)}</b> (${act.risk_tier} Risk)
+              <div style="font-size:13px; color:var(--ink-light); margin:4px 0;">${esc(act.details)}</div>
+              <button class="btn" style="padding:5px 14px; font-size:12px;" onclick="approveAction('${act.id}')">Approve</button>
+            </div>
+          `;
+        }
+        $('#automations-queue-list').innerHTML = html || 'No pending approvals in queue.';
+
+        const r = await api('automations/rules');
+        $('#automations-rules-list').innerHTML = r.rules.map(rule => `
+          <div style="padding:8px 0; border-bottom:1px solid #ebdcc1;">
+            <b>${esc(rule.name)}</b>: <code style="font-size:12px;">${esc(rule.condition)}</code> &rarr; ${esc(rule.action)}
+          </div>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function approveAction(actId) {
+      try {
+        const res = await api('automations/action', { action_id: actId, decision: 'approve' });
+        alert(res.message);
+        loadAutomations();
+      } catch (e) { alert(e.message); }
+    }
+
+    async function loadPlans() {
+      try {
+        const p = await api('billing/plans');
+        $('#subscription-plans-container').innerHTML = p.plans.map(pl => `
+          <div style="padding:12px; border:1px solid var(--gold-border); border-radius:12px; margin-bottom:12px; background:#fff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <b>${esc(pl.name)}</b>
+              <span class="tag calculated">${pl.price_inr === 0 ? 'Free' : '₹' + pl.price_inr.toLocaleString() + '/mo'}</span>
+            </div>
+            <ul style="font-size:13px; margin:8px 0 10px; padding-left:18px;">
+              ${pl.features.map(f => `<li>${esc(f)}</li>`).join('')}
+            </ul>
+            <button class="btn btn-gold" style="font-size:12px; padding:6px 16px;" onclick="subscribePlan('${pl.id}')">Generate GST Invoice</button>
+          </div>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function subscribePlan(planId) {
+      try {
+        const inv = await api('billing/subscribe', { plan_id: planId });
+        alert(`GST Invoice Generated: ${inv.invoice_number}\nTotal Payable: ₹${inv.total_payable.toLocaleString()} (incl. 18% GST)\nStatus: ${inv.payment_status}`);
+      } catch (e) { alert(e.message); }
+    }
+
+    async function submitAuth(type) {
+      const email = $('#auth-email').value.trim();
+      const pwd = $('#auth-pwd').value.trim();
+      try {
+        const res = await api('auth/' + type, { email, password: pwd });
+        localStorage.setItem('oracle_token', res.token);
+        $('#role-badge').textContent = 'Role: ' + res.role;
+        $('#auth-out').textContent = `Signed in successfully as ${res.role}!`;
+        loadData();
+      } catch (e) { $('#auth-out').textContent = e.message; }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
