@@ -448,9 +448,59 @@ def chat(msg, dash):
             return f"Estimated next-6-month revenue: ₹{sum(f['mean']):,.0f} (80% range ₹{sum(f['lo']):,.0f} to ₹{sum(f['hi']):,.0f}). Model {f['model']}; beats baseline: {f['beats_baseline']}. {DISCLAIMER}"
         return "Please load or upload your business data first to compute sales forecasts."
         
+    if any(w in m for w in ("invest", "amazon", "amzn", "nvda", "tsla", "aapl", "apple", "msft", "googl", "pltr", "stock")):
+        import market
+        sym = "AMZN"
+        for candidate in ("amzn", "amazon", "nvda", "nvidia", "tsla", "tesla", "aapl", "apple", "msft", "microsoft", "googl", "google", "pltr", "ibm"):
+            if candidate in m:
+                sym = {"amazon": "AMZN", "nvidia": "NVDA", "tesla": "TSLA", "apple": "AAPL", "microsoft": "MSFT", "google": "GOOGL"}.get(candidate, candidate.upper())
+                break
+        cap = 100000.0
+        h_days = 90
+        if len(n) >= 1 and n[0] >= 1000:
+            cap = n[0]
+            if len(n) >= 2 and n[1] <= 365:
+                h_days = int(n[1])
+        elif len(n) >= 1 and n[0] <= 365:
+            h_days = int(n[0])
+            
+        inv = market.analyze_investment(sym, h_days, cap)
+        if inv.get("status") == "error":
+            return f"Market Analysis: {inv.get('error')}"
+            
+        sc = inv["scenarios"]
+        return (
+            f"🎯 Investment Decision Intelligence for {inv['symbol']} (Live Price: ${inv['current_price']:,.2f}):\n"
+            f"• Success Rate (Win Probability): {inv['win_probability_pct']}%\n"
+            f"• Expected Base Horizon ({h_days} Days): {sc['base_case']['return_pct']:+.1f}% (Projected Value: ₹{sc['base_case']['projected_value']:,.0f})\n"
+            f"• Bull Case Momentum: {sc['bull_case']['return_pct']:+.1f}% (Target: ${sc['bull_case']['target_price']:,.2f} / ₹{sc['bull_case']['projected_value']:,.0f})\n"
+            f"• Maximum Downside Risk (95% VaR): -{inv['max_drawdown_risk_95_var']['max_loss_pct']:.1f}% (Potential Max Loss: ₹{inv['max_drawdown_risk_95_var']['max_loss_capital']:,.0f})\n"
+            f"• AI Verdict: {inv['verdict']} [{inv['rating']}]\n\n"
+            f"Telugu Summary: {inv['telugu_advice']}\n\n"
+            f"{inv['disclaimer']}"
+        )
+
+    if "oil" in m or "crude" in m or "brent" in m:
+        import market
+        q = market.get_live_commodity("oil")
+        if q.get("status") == "ok":
+            return f"Live Brent Crude Oil: ${q['price']:,.2f} {q['unit']} as of {q['as_of']} ({q['source']})."
+        return q.get("error", "Oil price unavailable")
+
+    if "alpaca" in m or "paper balance" in m or "buying power" in m:
+        import market
+        acc = market.get_alpaca_account()
+        if acc.get("status") == "ok":
+            return f"Alpaca Live Paper Trading: Cash ${acc['cash_balance']:,.2f}, Portfolio Equity ${acc['portfolio_equity']:,.2f}, Buying Power ${acc['buying_power']:,.2f} ({acc['status_text']})."
+        return acc.get("error", "Alpaca API unavailable")
+
     if "gold" in m or "silver" in m:
-        q = quote("gold" if "gold" in m else "silver")
-        return f"{q['price']:,.2f} {q['unit']} as of {q['as_of']} ({q['source']})." if q["status"] == "ok" else q.get("how") or q.get("error")
+        import market
+        q = market.get_live_quote("gold" if "gold" in m else "silver")
+        if q.get("status") == "ok":
+            extra = f" (Approx ₹{q['inr_approx_10g']:,.0f} per 10g in India)" if "inr_approx_10g" in q else ""
+            return f"{q.get('commodity', 'Metal')}: ${q['price']:,.2f} {q['unit']}{extra} as of {q['as_of']} ({q['source']})."
+        return q.get("how") or q.get("error")
         
     if "cricket" in m or "match" in m:
         c = cricket()

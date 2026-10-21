@@ -1,4 +1,4 @@
-﻿import os, sys, pytest
+import os, sys, pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from httpx import AsyncClient, ASGITransport
 import server, core, market, billing, automations
@@ -67,3 +67,22 @@ async def test_fastapi_billing_and_automations():
         r = await ac.get("/api/automations/rules")
         assert r.status_code == 200
         assert len(r.json()["rules"]) >= 3
+
+
+@pytest.mark.asyncio
+async def test_fastapi_investment_and_alpaca():
+    async with AsyncClient(transport=ASGITransport(app=server.app), base_url="http://test") as ac:
+        r = await ac.get("/api/market/invest?symbol=AMZN&horizon_days=90&capital=100000")
+        assert r.status_code == 200
+        d = r.json()
+        assert d["kind"] == "forecast"
+        assert "win_probability_pct" in d
+        assert "scenarios" in d
+
+        r_oil = await ac.get("/api/market/commodity?name=oil")
+        assert r_oil.status_code == 200
+        assert r_oil.json()["status"] == "ok"
+
+        r_alpaca = await ac.get("/api/market/alpaca/account")
+        assert r_alpaca.status_code == 200
+        assert r_alpaca.json()["status"] == "ok"

@@ -76,6 +76,19 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, core.market_forecast(q.get("symbol", "")))
             if r == "market/ipos":
                 return self.send(200, market.get_ipos())
+            if r == "market/invest":
+                sym = q.get("symbol") or body.get("symbol", "AMZN")
+                h_d = int(q.get("horizon_days") or body.get("horizon_days", 90))
+                cap = float(q.get("capital") or body.get("capital", 100000))
+                return self.send(200, market.analyze_investment(sym, h_d, cap))
+            if r == "market/commodity":
+                return self.send(200, market.get_live_commodity(q.get("name", "gold")))
+            if r == "market/alpaca/account":
+                return self.send(200, market.get_alpaca_account())
+            if r == "market/alpaca/positions":
+                return self.send(200, market.get_alpaca_positions())
+            if r == "market/alpaca/order":
+                return self.send(200, market.place_alpaca_order(body.get("symbol", "AMZN"), int(body.get("qty", 1)), body.get("side", "buy")))
             if r == "market/paper-trade":
                 act = body.get("action", "summary")
                 if act == "summary":
@@ -282,6 +295,38 @@ try:
     @app.get("/api/market/ipos")
     def api_ipos():
         return market.get_ipos()
+
+    class InvestPayload(BaseModel):
+        symbol: str = "AMZN"
+        horizon_days: int = 90
+        capital: float = 100000.0
+
+    @app.api_route("/api/market/invest", methods=["GET", "POST"])
+    def api_market_invest(symbol: str = "AMZN", horizon_days: int = 90, capital: float = 100000.0, p: Optional[InvestPayload] = None):
+        if p:
+            return market.analyze_investment(p.symbol, p.horizon_days, p.capital)
+        return market.analyze_investment(symbol, horizon_days, capital)
+
+    @app.get("/api/market/commodity")
+    def api_market_commodity(name: str = "gold"):
+        return market.get_live_commodity(name)
+
+    @app.get("/api/market/alpaca/account")
+    def api_alpaca_account():
+        return market.get_alpaca_account()
+
+    @app.get("/api/market/alpaca/positions")
+    def api_alpaca_positions():
+        return market.get_alpaca_positions()
+
+    class AlpacaOrderPayload(BaseModel):
+        symbol: str = "AMZN"
+        qty: int = 1
+        side: str = "buy"
+
+    @app.post("/api/market/alpaca/order")
+    def api_alpaca_order(p: AlpacaOrderPayload):
+        return market.place_alpaca_order(p.symbol, p.qty, p.side)
 
     @app.get("/api/cricket")
     def api_cricket():

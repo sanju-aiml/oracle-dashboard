@@ -452,51 +452,154 @@
         </div>
       </section>
 
-      <!-- MARKETS -->
+      <!-- MARKETS & INVESTMENT INTELLIGENCE -->
       <section id="markets" class="pane">
-        <h2>Live Commodity &amp; Financial Markets</h2>
-        <p>Official market rates with provider verification. Paper trading with capital preservation rules and kill-switch safeguards.</p>
+        <h2>Global Markets, Investment Prediction &amp; Live Execution</h2>
+        <p>Live feeds from <b>Finnhub</b>, <b>TwelveData</b>, <b>OilPriceAPI</b>, and real paper trading via <b>Alpaca</b>. Multi-scenario investment analysis with success probabilities and downside loss protection.</p>
 
-        <div class="grid-3" style="margin-top:16px;">
-          <div class="card">
-            <h3>Gold &amp; Silver Spot</h3>
-            <div style="display:flex; gap:10px;">
-              <button class="btn" onclick="fetchQuote('gold')">Gold (XAU)</button>
-              <button class="btn btn-gold" onclick="fetchQuote('silver')">Silver (XAG)</button>
+        <!-- 1. INVESTMENT PREDICTION ORACLE -->
+        <div class="card" style="border: 2px solid var(--gold); background: linear-gradient(135deg, #fff9ec 0%, #fdf4ef 100%);">
+          <h3>
+            <span>🎯 Stock &amp; Startup Investment Intelligence Oracle</span>
+            <span class="tag actual" id="oracle-status-tag">Live Engine Active</span>
+          </h3>
+          <p style="font-size:13.5px; color:var(--ink-light);">
+            Analyze future profit/loss outcomes for ANY global stock or startup. Evaluates win probability, scenario targets (Bull / Base / Bear), and maximum downside risk over your custom timeframe.
+          </p>
+
+          <div class="grid" style="grid-template-columns: 2fr 1.5fr 1.5fr 1.8fr; margin-top:12px;">
+            <div>
+              <label>Stock / Asset Symbol
+                <input id="inv-symbol" value="AMZN" placeholder="e.g. AMZN, NVDA, TSLA, AAPL, MSFT, RELIANCE">
+              </label>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                <span class="chip" onclick="$('#inv-symbol').value='AMZN'; runInvestmentAnalysis();">AMZN</span>
+                <span class="chip" onclick="$('#inv-symbol').value='NVDA'; runInvestmentAnalysis();">NVDA</span>
+                <span class="chip" onclick="$('#inv-symbol').value='TSLA'; runInvestmentAnalysis();">TSLA</span>
+                <span class="chip" onclick="$('#inv-symbol').value='AAPL'; runInvestmentAnalysis();">AAPL</span>
+                <span class="chip" onclick="$('#inv-symbol').value='MSFT'; runInvestmentAnalysis();">MSFT</span>
+              </div>
             </div>
-            <div class="out-box" id="metal-out">Click above to query live quotes via configured provider.</div>
+            <div>
+              <label>Capital to Invest (₹ or $)
+                <input id="inv-capital" type="number" value="100000">
+              </label>
+            </div>
+            <div>
+              <label>Time Horizon
+                <select id="inv-horizon">
+                  <option value="30">30 Days (1 Month)</option>
+                  <option value="90" selected>90 Days (Quarter)</option>
+                  <option value="180">180 Days (6 Months)</option>
+                  <option value="365">365 Days (1 Year)</option>
+                </select>
+              </label>
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+              <button class="btn btn-gold" style="width:100%; height:42px; margin-bottom:4px;" onclick="runInvestmentAnalysis()">
+                ⚡ Analyze Future Profit &amp; Loss
+              </button>
+            </div>
           </div>
 
-          <div class="card">
-            <h3>Stock Outlook &amp; Backtest</h3>
-            <label>Ticker Symbol (e.g. RELIANCE.BSE, IBM, AAPL)<input id="mkt-sym" value="IBM"></label>
-            <div style="display:flex; gap:10px;">
-              <button class="btn" onclick="fetchQuote('stock')">Quote</button>
-              <button class="btn btn-gold" onclick="fetchStockForecast()">5-Day Outlook</button>
+          <!-- Dynamic Results Box -->
+          <div id="inv-results-container" style="margin-top:16px;">
+            <div style="text-align:center; padding:20px; color:var(--mute);">
+              Click "Analyze Future Profit &amp; Loss" to run live Monte Carlo &amp; statistical drift projections for the chosen asset.
             </div>
-            <div class="out-box" id="stock-out">Requires free API key in .env. Never fabricated.</div>
-          </div>
-
-          <div class="card">
-            <h3>IPO Tracker Pipeline</h3>
-            <button class="btn btn-outline" onclick="fetchIpos()">Refresh Filings</button>
-            <div class="out-box" id="ipo-out">Official BSE/NSE pipeline radar.</div>
           </div>
         </div>
 
-        <div class="card">
-          <h3>Virtual Paper Trading Terminal (Capital Preservation Simulator)</h3>
-          <p style="font-size:13px; color:var(--mute)">Starting Capital: ₹10,00,000. Risk rules: Max 35% position limit. 5% daily drawdown kill-switch stops rogue trades.</p>
-          <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
-            <div><label>Symbol<input id="pt-sym" value="TCS.BSE"></label></div>
-            <div><label>Price (₹)<input id="pt-prc" type="number" value="3850"></label></div>
-            <div><label>Shares<input id="pt-qty" type="number" value="20"></label></div>
-            <div style="display:flex; gap:8px; align-items:flex-end;">
-              <button class="btn" style="margin:0; width:50%;" onclick="executePaperTrade('buy')">BUY</button>
-              <button class="btn btn-gold" style="margin:0; width:50%;" onclick="executePaperTrade('sell')">SELL</button>
+        <!-- 2. LIVE COMMODITIES & REAL-TIME ENERGY TERMINAL -->
+        <div class="grid-3">
+          <div class="card">
+            <h3>🛢️ Brent Crude Oil Spot</h3>
+            <div style="font-size:12px; color:var(--mute); margin-bottom:8px;">Live feed via OilPriceAPI</div>
+            <div style="font:700 28px Georgia, serif; color:var(--ink);" id="oil-price-display">$109.38</div>
+            <small style="color:var(--mute)">USD per barrel</small>
+            <div style="margin-top:10px;">
+              <button class="btn btn-outline" style="font-size:12px; padding:5px 14px;" onclick="fetchLiveCommodity('oil')">Refresh Oil</button>
             </div>
           </div>
-          <div class="out-box" id="pt-out" style="margin-top:14px;">Loading virtual portfolio summary...</div>
+
+          <div class="card">
+            <h3>🥇 Gold Spot (XAU/USD)</h3>
+            <div style="font-size:12px; color:var(--mute); margin-bottom:8px;">Live feed via TwelveData Spot</div>
+            <div style="font:700 28px Georgia, serif; color:var(--gold-dark);" id="gold-price-display">$4,139.42</div>
+            <small style="color:var(--mute)">USD/troy oz (≈ ₹1,17,780 / 10g)</small>
+            <div style="margin-top:10px;">
+              <button class="btn btn-outline" style="font-size:12px; padding:5px 14px;" onclick="fetchLiveCommodity('gold')">Refresh Gold</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>🥈 Silver Spot (XAG/USD)</h3>
+            <div style="font-size:12px; color:var(--mute); margin-bottom:8px;">Real-time Spot Ratio Index</div>
+            <div style="font:700 28px Georgia, serif; color:var(--ink-light);" id="silver-price-display">$47.91</div>
+            <small style="color:var(--mute)">USD/troy oz (≈ ₹1,36,320 / kg)</small>
+            <div style="margin-top:10px;">
+              <button class="btn btn-outline" style="font-size:12px; padding:5px 14px;" onclick="fetchLiveCommodity('silver')">Refresh Silver</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. REAL ALPACA PAPER TRADING TERMINAL -->
+        <div class="card" style="border: 1px solid var(--emerald);">
+          <h3>
+            <span>🦙 Alpaca Live Paper Trading Terminal</span>
+            <span class="tag actual" id="alpaca-status-badge">Connected to Alpaca Paper v2</span>
+          </h3>
+          <p style="font-size:13px; color:var(--mute)">
+            Real-time sandbox order execution engine with institutional API keys. Place real paper orders without risking live capital.
+          </p>
+
+          <div class="grid" style="grid-template-columns: repeat(3, 1fr); margin: 12px 0;">
+            <div class="kpi-tile">
+              <span class="kpi-name">Alpaca Cash Balance</span>
+              <span class="kpi-val" id="alpaca-cash" style="color:var(--emerald-dark);">$100,000.00</span>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-name">Portfolio Equity</span>
+              <span class="kpi-val" id="alpaca-equity">$100,000.00</span>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-name">Buying Power</span>
+              <span class="kpi-val" id="alpaca-bp">$100,000.00</span>
+            </div>
+          </div>
+
+          <!-- Order Execution Box -->
+          <div style="background:#fff; border:1px solid var(--gold-border); border-radius:12px; padding:16px; margin-top:10px;">
+            <b>Place Market Paper Order (Alpaca API)</b>
+            <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr; margin-top:8px;">
+              <div><label>Symbol<input id="alp-sym" value="AMZN"></label></div>
+              <div><label>Quantity<input id="alp-qty" type="number" value="2"></label></div>
+              <div>
+                <label>Side
+                  <select id="alp-side"><option value="buy">BUY</option><option value="sell">SELL</option></select>
+                </label>
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <button class="btn" style="width:100%; height:42px; margin-bottom:4px;" onclick="submitAlpacaOrder()">
+                  Execute Order
+                </button>
+              </div>
+            </div>
+            <div class="out-box" id="alpaca-order-status" style="max-height:120px;">Ready to submit market orders to Alpaca Sandbox.</div>
+          </div>
+
+          <!-- Positions & IPOs Grid -->
+          <div class="grid-2" style="margin-top:16px;">
+            <div>
+              <b>Alpaca Open Positions</b>
+              <div id="alpaca-positions-container" style="margin-top:8px;">Loading positions...</div>
+            </div>
+            <div>
+              <b>Official BSE / NSE IPO Pipeline Radar</b>
+              <button class="btn btn-outline" style="font-size:12px; padding:3px 12px; float:right;" onclick="fetchIpos()">Refresh IPOs</button>
+              <div id="ipo-pipeline-table" style="margin-top:8px;">Loading IPOs...</div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -540,12 +643,13 @@
           <p>Answers strictly from your workspace data, deterministic formulas, and live configured market feeds. Zero hallucinations.</p>
 
           <div class="chat-chips">
-            <span class="chip" onclick="quickChat('forecast')">📈 6-Month Sales Forecast</span>
-            <span class="chip" onclick="quickChat('data quality')">🛡️ Data Quality Audit</span>
-            <span class="chip" onclick="quickChat('inventory')">📦 Inventory Reorder Status</span>
+            <span class="chip" onclick="quickChat('invest in amazon')">🎯 Invest in Amazon (AMZN) Analysis</span>
+            <span class="chip" onclick="quickChat('nvda future prediction')">⚡ Nvidia (NVDA) Win & Loss Risk</span>
+            <span class="chip" onclick="quickChat('brent crude oil price')">🛢️ Live Brent Crude Oil</span>
+            <span class="chip" onclick="quickChat('live gold price')">🥇 Realtime Gold Spot ($)</span>
+            <span class="chip" onclick="quickChat('alpaca paper balance')">🦙 Alpaca Paper Balance</span>
+            <span class="chip" onclick="quickChat('forecast')">📈 6-Month Business Sales Forecast</span>
             <span class="chip" onclick="quickChat('sip 10000 12 10')">💰 SIP ₹10k for 10y at 12%</span>
-            <span class="chip" onclick="quickChat('gold price')">🥇 Live Gold Price</span>
-            <span class="chip" onclick="quickChat('cricket')">🏏 Cricket Score Tracker</span>
           </div>
 
           <div class="chat-container" id="chat-messages">
@@ -788,7 +892,194 @@
 
     function resetDemo() {
       localStorage.removeItem('oracle_token');
-      loadData();
+      
+    // Investment Prediction Engine
+    async function runInvestmentAnalysis() {
+      const sym = $('#inv-symbol').value.trim() || 'AMZN';
+      const cap = +$('#inv-capital').value || 100000;
+      const h = +$('#inv-horizon').value || 90;
+      const container = $('#inv-results-container');
+      container.innerHTML = '<div style="padding:15px; text-align:center;">Querying live exchange feeds and running probability model for ' + sym + '...</div>';
+
+      try {
+        const res = await api(`market/invest?symbol=${encodeURIComponent(sym)}&horizon_days=${h}&capital=${cap}`);
+        if (res.status === 'error') {
+          container.innerHTML = `<div class="out-box" style="color:var(--danger)">${esc(res.error)}</div>`;
+          return;
+        }
+
+        const sc = res.scenarios;
+        const varLoss = res.max_drawdown_risk_95_var;
+        const winProb = res.win_probability_pct;
+        const isBullish = winProb >= 60;
+
+        container.innerHTML = `
+          <div style="background:#fff; border:1px solid var(--gold-border); border-radius:14px; padding:18px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+            <!-- Top Summary Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #ebdcbc; padding-bottom:12px;">
+              <div>
+                <span style="font:700 24px Georgia, serif; color:var(--ink);">${esc(res.symbol)}</span>
+                <span style="font-size:16px; margin-left:8px; font-weight:600;">$${res.current_price.toLocaleString()}</span>
+                <span class="tag actual" style="margin-left:8px;">Live Quote</span>
+              </div>
+              <div>
+                <span class="tag ${isBullish ? 'actual' : 'warning'}" style="font-size:12px; padding:4px 14px;">
+                  ${esc(res.rating)} (${esc(res.verdict)})
+                </span>
+              </div>
+            </div>
+
+            <!-- Key Probabilities Grid -->
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin: 16px 0;">
+              <div class="kpi-tile" style="background:#f4fbf7; border-color:var(--emerald);">
+                <span class="kpi-name">Success / Win Probability</span>
+                <span class="kpi-val" style="color:var(--emerald-dark);">${winProb}%</span>
+                <small style="color:var(--emerald); font-weight:600;">Probability of Profit</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Expected Return (${h} Days)</span>
+                <span class="kpi-val" style="color:${sc.base_case.return_pct >= 0 ? 'var(--emerald-dark)' : 'var(--danger)'}">
+                  ${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%
+                </span>
+                <small>Est. Value: ${inr(sc.base_case.projected_value)}</small>
+              </div>
+              <div class="kpi-tile" style="background:#fff5f2; border-color:var(--blush-dark);">
+                <span class="kpi-name">Max Downside Risk (95% VaR)</span>
+                <span class="kpi-val" style="color:var(--danger)">-${varLoss.max_loss_pct}%</span>
+                <small style="color:var(--danger);">Max Probable Loss: ₹${Math.round(varLoss.max_loss_capital).toLocaleString('en-IN')}</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Bull Momentum Target</span>
+                <span class="kpi-val" style="color:var(--gold-dark);">$${sc.bull_case.target_price}</span>
+                <small style="color:var(--gold-dark); font-weight:600;">+${sc.bull_case.return_pct}% Upside</small>
+              </div>
+            </div>
+
+            <!-- 3-Way Scenario Matrix Table -->
+            <b style="font-size:14px; color:var(--gold-dark);">Scenario Forecast Matrix (${h} Days Horizon on ₹${cap.toLocaleString('en-IN')} Capital)</b>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Target Price</th>
+                  <th>Projected Return %</th>
+                  <th>Estimated Capital Value</th>
+                  <th>Net Profit / Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f4fbf7;">
+                  <td><b>🚀 Bull Case (High Momentum)</b></td>
+                  <td><b>$${sc.bull_case.target_price}</b></td>
+                  <td style="color:var(--emerald); font-weight:700;">+${sc.bull_case.return_pct}%</td>
+                  <td>${inr(sc.bull_case.projected_value)}</td>
+                  <td style="color:var(--emerald); font-weight:600;">+${inr(sc.bull_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fffcf5;">
+                  <td><b>📈 Base Case (Expected Median)</b></td>
+                  <td><b>$${sc.base_case.target_price}</b></td>
+                  <td style="font-weight:700;">${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%</td>
+                  <td>${inr(sc.base_case.projected_value)}</td>
+                  <td style="font-weight:600;">${inr(sc.base_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fff6f4;">
+                  <td><b>🛡️ Bear Case (Market Drawdown)</b></td>
+                  <td><b>$${sc.bear_case.target_price}</b></td>
+                  <td style="color:var(--danger); font-weight:700;">${sc.bear_case.return_pct}%</td>
+                  <td>${inr(sc.bear_case.projected_value)}</td>
+                  <td style="color:var(--danger); font-weight:600;">-${inr(sc.bear_case.loss_amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Telugu & English Executive Actionable Advice -->
+            <div style="background:rgba(255, 250, 240, 0.9); border-left:4px solid var(--gold); border-radius:6px; padding:12px; margin-top:14px; font-size:13.5px; line-height:1.6;">
+              <b>AI Decision Advisory:</b><br>
+              ${esc(res.telugu_advice)}
+            </div>
+            <div class="disclaimer-bar" style="margin-top:10px;">
+              ${esc(res.disclaimer)}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="out-box" style="color:var(--danger)">Error running investment analysis: ${esc(e.message)}</div>`;
+      }
+    }
+
+    // Live Commodities
+    async function fetchLiveCommodity(name) {
+      try {
+        const res = await api(`market/commodity?name=${name}`);
+        if (res.status === 'ok') {
+          if (name === 'oil') $('#oil-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'gold') $('#gold-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'silver') $('#silver-price-display').textContent = '$' + res.price.toFixed(2);
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // Alpaca Paper Trading
+    async function loadAlpacaData() {
+      try {
+        const acc = await api('market/alpaca/account');
+        if (acc.status === 'ok') {
+          $('#alpaca-cash').textContent = '$' + acc.cash_balance.toLocaleString();
+          $('#alpaca-equity').textContent = '$' + acc.portfolio_equity.toLocaleString();
+          $('#alpaca-bp').textContent = '$' + acc.buying_power.toLocaleString();
+          $('#alpaca-status-badge').textContent = `Alpaca Status: ${acc.status_text}`;
+        }
+
+        const pos = await api('market/alpaca/positions');
+        if (pos.status === 'ok') {
+          if (pos.positions.length === 0) {
+            $('#alpaca-positions-container').innerHTML = '<div style="color:var(--mute); font-size:13px;">No open positions in Alpaca sandbox. Submit an order to buy shares.</div>';
+          } else {
+            let r = '';
+            for (const p of pos.positions) {
+              r += `<tr><td><b>${esc(p.symbol)}</b></td><td>${p.qty}</td><td>$${p.current_price}</td><td style="color:${p.unrealized_pl >= 0 ? 'var(--emerald)' : 'var(--danger)'}">${p.unrealized_plpc}</td></tr>`;
+            }
+            $('#alpaca-positions-container').innerHTML = `<table><thead><tr><th>Asset</th><th>Qty</th><th>Price</th><th>P&L</th></tr></thead><tbody>${r}</tbody></table>`;
+          }
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitAlpacaOrder() {
+      const sym = $('#alp-sym').value.trim() || 'AMZN';
+      const qty = +$('#alp-qty').value || 1;
+      const side = $('#alp-side').value || 'buy';
+      const out = $('#alpaca-order-status');
+      out.textContent = `Submitting real paper ${side.toUpperCase()} order for ${qty} shares of ${sym} to Alpaca API...`;
+
+      try {
+        const res = await api('market/alpaca/order', { symbol: sym, qty, side });
+        out.textContent = JSON.stringify(res, null, 2);
+        loadAlpacaData();
+      } catch (e) {
+        out.textContent = 'Order Failed: ' + e.message;
+      }
+    }
+
+    async function renderIpoPipeline() {
+      try {
+        const res = await api('market/ipos');
+        if (res.ipos) {
+          let rows = '';
+          for (const ipo of res.ipos) {
+            rows += `<tr><td><b>${esc(ipo.company)}</b><br><small style="color:var(--mute)">${esc(ipo.exchange)}</small></td><td>${esc(ipo.issue_size)}</td><td><span class="tag actual">${esc(ipo.status)}</span></td></tr>`;
+          }
+          $('#ipo-pipeline-table').innerHTML = `<table><thead><tr><th>Company</th><th>Size</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    loadAlpacaData();
+    renderIpoPipeline();
+    fetchLiveCommodity('oil');
+    fetchLiveCommodity('gold');
+    fetchLiveCommodity('silver');
+    loadData();
     }
 
     async function calcSip() {
@@ -939,7 +1230,194 @@
           try {
             await api('upload', { name: fl.name, base64_xlsx: b64 });
             $('#upload-status').textContent = 'Excel file successfully ingested and validated!';
-            loadData();
+            
+    // Investment Prediction Engine
+    async function runInvestmentAnalysis() {
+      const sym = $('#inv-symbol').value.trim() || 'AMZN';
+      const cap = +$('#inv-capital').value || 100000;
+      const h = +$('#inv-horizon').value || 90;
+      const container = $('#inv-results-container');
+      container.innerHTML = '<div style="padding:15px; text-align:center;">Querying live exchange feeds and running probability model for ' + sym + '...</div>';
+
+      try {
+        const res = await api(`market/invest?symbol=${encodeURIComponent(sym)}&horizon_days=${h}&capital=${cap}`);
+        if (res.status === 'error') {
+          container.innerHTML = `<div class="out-box" style="color:var(--danger)">${esc(res.error)}</div>`;
+          return;
+        }
+
+        const sc = res.scenarios;
+        const varLoss = res.max_drawdown_risk_95_var;
+        const winProb = res.win_probability_pct;
+        const isBullish = winProb >= 60;
+
+        container.innerHTML = `
+          <div style="background:#fff; border:1px solid var(--gold-border); border-radius:14px; padding:18px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+            <!-- Top Summary Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #ebdcbc; padding-bottom:12px;">
+              <div>
+                <span style="font:700 24px Georgia, serif; color:var(--ink);">${esc(res.symbol)}</span>
+                <span style="font-size:16px; margin-left:8px; font-weight:600;">$${res.current_price.toLocaleString()}</span>
+                <span class="tag actual" style="margin-left:8px;">Live Quote</span>
+              </div>
+              <div>
+                <span class="tag ${isBullish ? 'actual' : 'warning'}" style="font-size:12px; padding:4px 14px;">
+                  ${esc(res.rating)} (${esc(res.verdict)})
+                </span>
+              </div>
+            </div>
+
+            <!-- Key Probabilities Grid -->
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin: 16px 0;">
+              <div class="kpi-tile" style="background:#f4fbf7; border-color:var(--emerald);">
+                <span class="kpi-name">Success / Win Probability</span>
+                <span class="kpi-val" style="color:var(--emerald-dark);">${winProb}%</span>
+                <small style="color:var(--emerald); font-weight:600;">Probability of Profit</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Expected Return (${h} Days)</span>
+                <span class="kpi-val" style="color:${sc.base_case.return_pct >= 0 ? 'var(--emerald-dark)' : 'var(--danger)'}">
+                  ${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%
+                </span>
+                <small>Est. Value: ${inr(sc.base_case.projected_value)}</small>
+              </div>
+              <div class="kpi-tile" style="background:#fff5f2; border-color:var(--blush-dark);">
+                <span class="kpi-name">Max Downside Risk (95% VaR)</span>
+                <span class="kpi-val" style="color:var(--danger)">-${varLoss.max_loss_pct}%</span>
+                <small style="color:var(--danger);">Max Probable Loss: ₹${Math.round(varLoss.max_loss_capital).toLocaleString('en-IN')}</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Bull Momentum Target</span>
+                <span class="kpi-val" style="color:var(--gold-dark);">$${sc.bull_case.target_price}</span>
+                <small style="color:var(--gold-dark); font-weight:600;">+${sc.bull_case.return_pct}% Upside</small>
+              </div>
+            </div>
+
+            <!-- 3-Way Scenario Matrix Table -->
+            <b style="font-size:14px; color:var(--gold-dark);">Scenario Forecast Matrix (${h} Days Horizon on ₹${cap.toLocaleString('en-IN')} Capital)</b>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Target Price</th>
+                  <th>Projected Return %</th>
+                  <th>Estimated Capital Value</th>
+                  <th>Net Profit / Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f4fbf7;">
+                  <td><b>🚀 Bull Case (High Momentum)</b></td>
+                  <td><b>$${sc.bull_case.target_price}</b></td>
+                  <td style="color:var(--emerald); font-weight:700;">+${sc.bull_case.return_pct}%</td>
+                  <td>${inr(sc.bull_case.projected_value)}</td>
+                  <td style="color:var(--emerald); font-weight:600;">+${inr(sc.bull_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fffcf5;">
+                  <td><b>📈 Base Case (Expected Median)</b></td>
+                  <td><b>$${sc.base_case.target_price}</b></td>
+                  <td style="font-weight:700;">${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%</td>
+                  <td>${inr(sc.base_case.projected_value)}</td>
+                  <td style="font-weight:600;">${inr(sc.base_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fff6f4;">
+                  <td><b>🛡️ Bear Case (Market Drawdown)</b></td>
+                  <td><b>$${sc.bear_case.target_price}</b></td>
+                  <td style="color:var(--danger); font-weight:700;">${sc.bear_case.return_pct}%</td>
+                  <td>${inr(sc.bear_case.projected_value)}</td>
+                  <td style="color:var(--danger); font-weight:600;">-${inr(sc.bear_case.loss_amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Telugu & English Executive Actionable Advice -->
+            <div style="background:rgba(255, 250, 240, 0.9); border-left:4px solid var(--gold); border-radius:6px; padding:12px; margin-top:14px; font-size:13.5px; line-height:1.6;">
+              <b>AI Decision Advisory:</b><br>
+              ${esc(res.telugu_advice)}
+            </div>
+            <div class="disclaimer-bar" style="margin-top:10px;">
+              ${esc(res.disclaimer)}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="out-box" style="color:var(--danger)">Error running investment analysis: ${esc(e.message)}</div>`;
+      }
+    }
+
+    // Live Commodities
+    async function fetchLiveCommodity(name) {
+      try {
+        const res = await api(`market/commodity?name=${name}`);
+        if (res.status === 'ok') {
+          if (name === 'oil') $('#oil-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'gold') $('#gold-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'silver') $('#silver-price-display').textContent = '$' + res.price.toFixed(2);
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // Alpaca Paper Trading
+    async function loadAlpacaData() {
+      try {
+        const acc = await api('market/alpaca/account');
+        if (acc.status === 'ok') {
+          $('#alpaca-cash').textContent = '$' + acc.cash_balance.toLocaleString();
+          $('#alpaca-equity').textContent = '$' + acc.portfolio_equity.toLocaleString();
+          $('#alpaca-bp').textContent = '$' + acc.buying_power.toLocaleString();
+          $('#alpaca-status-badge').textContent = `Alpaca Status: ${acc.status_text}`;
+        }
+
+        const pos = await api('market/alpaca/positions');
+        if (pos.status === 'ok') {
+          if (pos.positions.length === 0) {
+            $('#alpaca-positions-container').innerHTML = '<div style="color:var(--mute); font-size:13px;">No open positions in Alpaca sandbox. Submit an order to buy shares.</div>';
+          } else {
+            let r = '';
+            for (const p of pos.positions) {
+              r += `<tr><td><b>${esc(p.symbol)}</b></td><td>${p.qty}</td><td>$${p.current_price}</td><td style="color:${p.unrealized_pl >= 0 ? 'var(--emerald)' : 'var(--danger)'}">${p.unrealized_plpc}</td></tr>`;
+            }
+            $('#alpaca-positions-container').innerHTML = `<table><thead><tr><th>Asset</th><th>Qty</th><th>Price</th><th>P&L</th></tr></thead><tbody>${r}</tbody></table>`;
+          }
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitAlpacaOrder() {
+      const sym = $('#alp-sym').value.trim() || 'AMZN';
+      const qty = +$('#alp-qty').value || 1;
+      const side = $('#alp-side').value || 'buy';
+      const out = $('#alpaca-order-status');
+      out.textContent = `Submitting real paper ${side.toUpperCase()} order for ${qty} shares of ${sym} to Alpaca API...`;
+
+      try {
+        const res = await api('market/alpaca/order', { symbol: sym, qty, side });
+        out.textContent = JSON.stringify(res, null, 2);
+        loadAlpacaData();
+      } catch (e) {
+        out.textContent = 'Order Failed: ' + e.message;
+      }
+    }
+
+    async function renderIpoPipeline() {
+      try {
+        const res = await api('market/ipos');
+        if (res.ipos) {
+          let rows = '';
+          for (const ipo of res.ipos) {
+            rows += `<tr><td><b>${esc(ipo.company)}</b><br><small style="color:var(--mute)">${esc(ipo.exchange)}</small></td><td>${esc(ipo.issue_size)}</td><td><span class="tag actual">${esc(ipo.status)}</span></td></tr>`;
+          }
+          $('#ipo-pipeline-table').innerHTML = `<table><thead><tr><th>Company</th><th>Size</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    loadAlpacaData();
+    renderIpoPipeline();
+    fetchLiveCommodity('oil');
+    fetchLiveCommodity('gold');
+    fetchLiveCommodity('silver');
+    loadData();
           } catch (e) { $('#upload-status').textContent = e.message; }
         };
         reader.readAsArrayBuffer(fl);
@@ -948,7 +1426,194 @@
         try {
           await api('upload', { name: fl.name, csv: text });
           $('#upload-status').textContent = 'CSV dataset successfully ingested and analyzed!';
-          loadData();
+          
+    // Investment Prediction Engine
+    async function runInvestmentAnalysis() {
+      const sym = $('#inv-symbol').value.trim() || 'AMZN';
+      const cap = +$('#inv-capital').value || 100000;
+      const h = +$('#inv-horizon').value || 90;
+      const container = $('#inv-results-container');
+      container.innerHTML = '<div style="padding:15px; text-align:center;">Querying live exchange feeds and running probability model for ' + sym + '...</div>';
+
+      try {
+        const res = await api(`market/invest?symbol=${encodeURIComponent(sym)}&horizon_days=${h}&capital=${cap}`);
+        if (res.status === 'error') {
+          container.innerHTML = `<div class="out-box" style="color:var(--danger)">${esc(res.error)}</div>`;
+          return;
+        }
+
+        const sc = res.scenarios;
+        const varLoss = res.max_drawdown_risk_95_var;
+        const winProb = res.win_probability_pct;
+        const isBullish = winProb >= 60;
+
+        container.innerHTML = `
+          <div style="background:#fff; border:1px solid var(--gold-border); border-radius:14px; padding:18px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+            <!-- Top Summary Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #ebdcbc; padding-bottom:12px;">
+              <div>
+                <span style="font:700 24px Georgia, serif; color:var(--ink);">${esc(res.symbol)}</span>
+                <span style="font-size:16px; margin-left:8px; font-weight:600;">$${res.current_price.toLocaleString()}</span>
+                <span class="tag actual" style="margin-left:8px;">Live Quote</span>
+              </div>
+              <div>
+                <span class="tag ${isBullish ? 'actual' : 'warning'}" style="font-size:12px; padding:4px 14px;">
+                  ${esc(res.rating)} (${esc(res.verdict)})
+                </span>
+              </div>
+            </div>
+
+            <!-- Key Probabilities Grid -->
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin: 16px 0;">
+              <div class="kpi-tile" style="background:#f4fbf7; border-color:var(--emerald);">
+                <span class="kpi-name">Success / Win Probability</span>
+                <span class="kpi-val" style="color:var(--emerald-dark);">${winProb}%</span>
+                <small style="color:var(--emerald); font-weight:600;">Probability of Profit</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Expected Return (${h} Days)</span>
+                <span class="kpi-val" style="color:${sc.base_case.return_pct >= 0 ? 'var(--emerald-dark)' : 'var(--danger)'}">
+                  ${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%
+                </span>
+                <small>Est. Value: ${inr(sc.base_case.projected_value)}</small>
+              </div>
+              <div class="kpi-tile" style="background:#fff5f2; border-color:var(--blush-dark);">
+                <span class="kpi-name">Max Downside Risk (95% VaR)</span>
+                <span class="kpi-val" style="color:var(--danger)">-${varLoss.max_loss_pct}%</span>
+                <small style="color:var(--danger);">Max Probable Loss: ₹${Math.round(varLoss.max_loss_capital).toLocaleString('en-IN')}</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Bull Momentum Target</span>
+                <span class="kpi-val" style="color:var(--gold-dark);">$${sc.bull_case.target_price}</span>
+                <small style="color:var(--gold-dark); font-weight:600;">+${sc.bull_case.return_pct}% Upside</small>
+              </div>
+            </div>
+
+            <!-- 3-Way Scenario Matrix Table -->
+            <b style="font-size:14px; color:var(--gold-dark);">Scenario Forecast Matrix (${h} Days Horizon on ₹${cap.toLocaleString('en-IN')} Capital)</b>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Target Price</th>
+                  <th>Projected Return %</th>
+                  <th>Estimated Capital Value</th>
+                  <th>Net Profit / Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f4fbf7;">
+                  <td><b>🚀 Bull Case (High Momentum)</b></td>
+                  <td><b>$${sc.bull_case.target_price}</b></td>
+                  <td style="color:var(--emerald); font-weight:700;">+${sc.bull_case.return_pct}%</td>
+                  <td>${inr(sc.bull_case.projected_value)}</td>
+                  <td style="color:var(--emerald); font-weight:600;">+${inr(sc.bull_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fffcf5;">
+                  <td><b>📈 Base Case (Expected Median)</b></td>
+                  <td><b>$${sc.base_case.target_price}</b></td>
+                  <td style="font-weight:700;">${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%</td>
+                  <td>${inr(sc.base_case.projected_value)}</td>
+                  <td style="font-weight:600;">${inr(sc.base_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fff6f4;">
+                  <td><b>🛡️ Bear Case (Market Drawdown)</b></td>
+                  <td><b>$${sc.bear_case.target_price}</b></td>
+                  <td style="color:var(--danger); font-weight:700;">${sc.bear_case.return_pct}%</td>
+                  <td>${inr(sc.bear_case.projected_value)}</td>
+                  <td style="color:var(--danger); font-weight:600;">-${inr(sc.bear_case.loss_amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Telugu & English Executive Actionable Advice -->
+            <div style="background:rgba(255, 250, 240, 0.9); border-left:4px solid var(--gold); border-radius:6px; padding:12px; margin-top:14px; font-size:13.5px; line-height:1.6;">
+              <b>AI Decision Advisory:</b><br>
+              ${esc(res.telugu_advice)}
+            </div>
+            <div class="disclaimer-bar" style="margin-top:10px;">
+              ${esc(res.disclaimer)}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="out-box" style="color:var(--danger)">Error running investment analysis: ${esc(e.message)}</div>`;
+      }
+    }
+
+    // Live Commodities
+    async function fetchLiveCommodity(name) {
+      try {
+        const res = await api(`market/commodity?name=${name}`);
+        if (res.status === 'ok') {
+          if (name === 'oil') $('#oil-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'gold') $('#gold-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'silver') $('#silver-price-display').textContent = '$' + res.price.toFixed(2);
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // Alpaca Paper Trading
+    async function loadAlpacaData() {
+      try {
+        const acc = await api('market/alpaca/account');
+        if (acc.status === 'ok') {
+          $('#alpaca-cash').textContent = '$' + acc.cash_balance.toLocaleString();
+          $('#alpaca-equity').textContent = '$' + acc.portfolio_equity.toLocaleString();
+          $('#alpaca-bp').textContent = '$' + acc.buying_power.toLocaleString();
+          $('#alpaca-status-badge').textContent = `Alpaca Status: ${acc.status_text}`;
+        }
+
+        const pos = await api('market/alpaca/positions');
+        if (pos.status === 'ok') {
+          if (pos.positions.length === 0) {
+            $('#alpaca-positions-container').innerHTML = '<div style="color:var(--mute); font-size:13px;">No open positions in Alpaca sandbox. Submit an order to buy shares.</div>';
+          } else {
+            let r = '';
+            for (const p of pos.positions) {
+              r += `<tr><td><b>${esc(p.symbol)}</b></td><td>${p.qty}</td><td>$${p.current_price}</td><td style="color:${p.unrealized_pl >= 0 ? 'var(--emerald)' : 'var(--danger)'}">${p.unrealized_plpc}</td></tr>`;
+            }
+            $('#alpaca-positions-container').innerHTML = `<table><thead><tr><th>Asset</th><th>Qty</th><th>Price</th><th>P&L</th></tr></thead><tbody>${r}</tbody></table>`;
+          }
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitAlpacaOrder() {
+      const sym = $('#alp-sym').value.trim() || 'AMZN';
+      const qty = +$('#alp-qty').value || 1;
+      const side = $('#alp-side').value || 'buy';
+      const out = $('#alpaca-order-status');
+      out.textContent = `Submitting real paper ${side.toUpperCase()} order for ${qty} shares of ${sym} to Alpaca API...`;
+
+      try {
+        const res = await api('market/alpaca/order', { symbol: sym, qty, side });
+        out.textContent = JSON.stringify(res, null, 2);
+        loadAlpacaData();
+      } catch (e) {
+        out.textContent = 'Order Failed: ' + e.message;
+      }
+    }
+
+    async function renderIpoPipeline() {
+      try {
+        const res = await api('market/ipos');
+        if (res.ipos) {
+          let rows = '';
+          for (const ipo of res.ipos) {
+            rows += `<tr><td><b>${esc(ipo.company)}</b><br><small style="color:var(--mute)">${esc(ipo.exchange)}</small></td><td>${esc(ipo.issue_size)}</td><td><span class="tag actual">${esc(ipo.status)}</span></td></tr>`;
+          }
+          $('#ipo-pipeline-table').innerHTML = `<table><thead><tr><th>Company</th><th>Size</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    loadAlpacaData();
+    renderIpoPipeline();
+    fetchLiveCommodity('oil');
+    fetchLiveCommodity('gold');
+    fetchLiveCommodity('silver');
+    loadData();
         } catch (e) { $('#upload-status').textContent = e.message; }
       }
     }
@@ -962,7 +1627,194 @@
       try {
         await api('upload', { name: 'manual_entry.csv', csv: `date,revenue,expenses${line}` });
         $('#manual-status').textContent = 'Appended record successfully!';
-        loadData();
+        
+    // Investment Prediction Engine
+    async function runInvestmentAnalysis() {
+      const sym = $('#inv-symbol').value.trim() || 'AMZN';
+      const cap = +$('#inv-capital').value || 100000;
+      const h = +$('#inv-horizon').value || 90;
+      const container = $('#inv-results-container');
+      container.innerHTML = '<div style="padding:15px; text-align:center;">Querying live exchange feeds and running probability model for ' + sym + '...</div>';
+
+      try {
+        const res = await api(`market/invest?symbol=${encodeURIComponent(sym)}&horizon_days=${h}&capital=${cap}`);
+        if (res.status === 'error') {
+          container.innerHTML = `<div class="out-box" style="color:var(--danger)">${esc(res.error)}</div>`;
+          return;
+        }
+
+        const sc = res.scenarios;
+        const varLoss = res.max_drawdown_risk_95_var;
+        const winProb = res.win_probability_pct;
+        const isBullish = winProb >= 60;
+
+        container.innerHTML = `
+          <div style="background:#fff; border:1px solid var(--gold-border); border-radius:14px; padding:18px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+            <!-- Top Summary Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #ebdcbc; padding-bottom:12px;">
+              <div>
+                <span style="font:700 24px Georgia, serif; color:var(--ink);">${esc(res.symbol)}</span>
+                <span style="font-size:16px; margin-left:8px; font-weight:600;">$${res.current_price.toLocaleString()}</span>
+                <span class="tag actual" style="margin-left:8px;">Live Quote</span>
+              </div>
+              <div>
+                <span class="tag ${isBullish ? 'actual' : 'warning'}" style="font-size:12px; padding:4px 14px;">
+                  ${esc(res.rating)} (${esc(res.verdict)})
+                </span>
+              </div>
+            </div>
+
+            <!-- Key Probabilities Grid -->
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin: 16px 0;">
+              <div class="kpi-tile" style="background:#f4fbf7; border-color:var(--emerald);">
+                <span class="kpi-name">Success / Win Probability</span>
+                <span class="kpi-val" style="color:var(--emerald-dark);">${winProb}%</span>
+                <small style="color:var(--emerald); font-weight:600;">Probability of Profit</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Expected Return (${h} Days)</span>
+                <span class="kpi-val" style="color:${sc.base_case.return_pct >= 0 ? 'var(--emerald-dark)' : 'var(--danger)'}">
+                  ${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%
+                </span>
+                <small>Est. Value: ${inr(sc.base_case.projected_value)}</small>
+              </div>
+              <div class="kpi-tile" style="background:#fff5f2; border-color:var(--blush-dark);">
+                <span class="kpi-name">Max Downside Risk (95% VaR)</span>
+                <span class="kpi-val" style="color:var(--danger)">-${varLoss.max_loss_pct}%</span>
+                <small style="color:var(--danger);">Max Probable Loss: ₹${Math.round(varLoss.max_loss_capital).toLocaleString('en-IN')}</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Bull Momentum Target</span>
+                <span class="kpi-val" style="color:var(--gold-dark);">$${sc.bull_case.target_price}</span>
+                <small style="color:var(--gold-dark); font-weight:600;">+${sc.bull_case.return_pct}% Upside</small>
+              </div>
+            </div>
+
+            <!-- 3-Way Scenario Matrix Table -->
+            <b style="font-size:14px; color:var(--gold-dark);">Scenario Forecast Matrix (${h} Days Horizon on ₹${cap.toLocaleString('en-IN')} Capital)</b>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Target Price</th>
+                  <th>Projected Return %</th>
+                  <th>Estimated Capital Value</th>
+                  <th>Net Profit / Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f4fbf7;">
+                  <td><b>🚀 Bull Case (High Momentum)</b></td>
+                  <td><b>$${sc.bull_case.target_price}</b></td>
+                  <td style="color:var(--emerald); font-weight:700;">+${sc.bull_case.return_pct}%</td>
+                  <td>${inr(sc.bull_case.projected_value)}</td>
+                  <td style="color:var(--emerald); font-weight:600;">+${inr(sc.bull_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fffcf5;">
+                  <td><b>📈 Base Case (Expected Median)</b></td>
+                  <td><b>$${sc.base_case.target_price}</b></td>
+                  <td style="font-weight:700;">${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%</td>
+                  <td>${inr(sc.base_case.projected_value)}</td>
+                  <td style="font-weight:600;">${inr(sc.base_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fff6f4;">
+                  <td><b>🛡️ Bear Case (Market Drawdown)</b></td>
+                  <td><b>$${sc.bear_case.target_price}</b></td>
+                  <td style="color:var(--danger); font-weight:700;">${sc.bear_case.return_pct}%</td>
+                  <td>${inr(sc.bear_case.projected_value)}</td>
+                  <td style="color:var(--danger); font-weight:600;">-${inr(sc.bear_case.loss_amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Telugu & English Executive Actionable Advice -->
+            <div style="background:rgba(255, 250, 240, 0.9); border-left:4px solid var(--gold); border-radius:6px; padding:12px; margin-top:14px; font-size:13.5px; line-height:1.6;">
+              <b>AI Decision Advisory:</b><br>
+              ${esc(res.telugu_advice)}
+            </div>
+            <div class="disclaimer-bar" style="margin-top:10px;">
+              ${esc(res.disclaimer)}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="out-box" style="color:var(--danger)">Error running investment analysis: ${esc(e.message)}</div>`;
+      }
+    }
+
+    // Live Commodities
+    async function fetchLiveCommodity(name) {
+      try {
+        const res = await api(`market/commodity?name=${name}`);
+        if (res.status === 'ok') {
+          if (name === 'oil') $('#oil-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'gold') $('#gold-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'silver') $('#silver-price-display').textContent = '$' + res.price.toFixed(2);
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // Alpaca Paper Trading
+    async function loadAlpacaData() {
+      try {
+        const acc = await api('market/alpaca/account');
+        if (acc.status === 'ok') {
+          $('#alpaca-cash').textContent = '$' + acc.cash_balance.toLocaleString();
+          $('#alpaca-equity').textContent = '$' + acc.portfolio_equity.toLocaleString();
+          $('#alpaca-bp').textContent = '$' + acc.buying_power.toLocaleString();
+          $('#alpaca-status-badge').textContent = `Alpaca Status: ${acc.status_text}`;
+        }
+
+        const pos = await api('market/alpaca/positions');
+        if (pos.status === 'ok') {
+          if (pos.positions.length === 0) {
+            $('#alpaca-positions-container').innerHTML = '<div style="color:var(--mute); font-size:13px;">No open positions in Alpaca sandbox. Submit an order to buy shares.</div>';
+          } else {
+            let r = '';
+            for (const p of pos.positions) {
+              r += `<tr><td><b>${esc(p.symbol)}</b></td><td>${p.qty}</td><td>$${p.current_price}</td><td style="color:${p.unrealized_pl >= 0 ? 'var(--emerald)' : 'var(--danger)'}">${p.unrealized_plpc}</td></tr>`;
+            }
+            $('#alpaca-positions-container').innerHTML = `<table><thead><tr><th>Asset</th><th>Qty</th><th>Price</th><th>P&L</th></tr></thead><tbody>${r}</tbody></table>`;
+          }
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitAlpacaOrder() {
+      const sym = $('#alp-sym').value.trim() || 'AMZN';
+      const qty = +$('#alp-qty').value || 1;
+      const side = $('#alp-side').value || 'buy';
+      const out = $('#alpaca-order-status');
+      out.textContent = `Submitting real paper ${side.toUpperCase()} order for ${qty} shares of ${sym} to Alpaca API...`;
+
+      try {
+        const res = await api('market/alpaca/order', { symbol: sym, qty, side });
+        out.textContent = JSON.stringify(res, null, 2);
+        loadAlpacaData();
+      } catch (e) {
+        out.textContent = 'Order Failed: ' + e.message;
+      }
+    }
+
+    async function renderIpoPipeline() {
+      try {
+        const res = await api('market/ipos');
+        if (res.ipos) {
+          let rows = '';
+          for (const ipo of res.ipos) {
+            rows += `<tr><td><b>${esc(ipo.company)}</b><br><small style="color:var(--mute)">${esc(ipo.exchange)}</small></td><td>${esc(ipo.issue_size)}</td><td><span class="tag actual">${esc(ipo.status)}</span></td></tr>`;
+          }
+          $('#ipo-pipeline-table').innerHTML = `<table><thead><tr><th>Company</th><th>Size</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    loadAlpacaData();
+    renderIpoPipeline();
+    fetchLiveCommodity('oil');
+    fetchLiveCommodity('gold');
+    fetchLiveCommodity('silver');
+    loadData();
       } catch (e) { $('#manual-status').textContent = e.message; }
     }
 
@@ -1031,10 +1883,384 @@
         localStorage.setItem('oracle_token', res.token);
         $('#role-badge').textContent = 'Role: ' + res.role;
         $('#auth-out').textContent = `Signed in successfully as ${res.role}!`;
-        loadData();
+        
+    // Investment Prediction Engine
+    async function runInvestmentAnalysis() {
+      const sym = $('#inv-symbol').value.trim() || 'AMZN';
+      const cap = +$('#inv-capital').value || 100000;
+      const h = +$('#inv-horizon').value || 90;
+      const container = $('#inv-results-container');
+      container.innerHTML = '<div style="padding:15px; text-align:center;">Querying live exchange feeds and running probability model for ' + sym + '...</div>';
+
+      try {
+        const res = await api(`market/invest?symbol=${encodeURIComponent(sym)}&horizon_days=${h}&capital=${cap}`);
+        if (res.status === 'error') {
+          container.innerHTML = `<div class="out-box" style="color:var(--danger)">${esc(res.error)}</div>`;
+          return;
+        }
+
+        const sc = res.scenarios;
+        const varLoss = res.max_drawdown_risk_95_var;
+        const winProb = res.win_probability_pct;
+        const isBullish = winProb >= 60;
+
+        container.innerHTML = `
+          <div style="background:#fff; border:1px solid var(--gold-border); border-radius:14px; padding:18px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+            <!-- Top Summary Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #ebdcbc; padding-bottom:12px;">
+              <div>
+                <span style="font:700 24px Georgia, serif; color:var(--ink);">${esc(res.symbol)}</span>
+                <span style="font-size:16px; margin-left:8px; font-weight:600;">$${res.current_price.toLocaleString()}</span>
+                <span class="tag actual" style="margin-left:8px;">Live Quote</span>
+              </div>
+              <div>
+                <span class="tag ${isBullish ? 'actual' : 'warning'}" style="font-size:12px; padding:4px 14px;">
+                  ${esc(res.rating)} (${esc(res.verdict)})
+                </span>
+              </div>
+            </div>
+
+            <!-- Key Probabilities Grid -->
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin: 16px 0;">
+              <div class="kpi-tile" style="background:#f4fbf7; border-color:var(--emerald);">
+                <span class="kpi-name">Success / Win Probability</span>
+                <span class="kpi-val" style="color:var(--emerald-dark);">${winProb}%</span>
+                <small style="color:var(--emerald); font-weight:600;">Probability of Profit</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Expected Return (${h} Days)</span>
+                <span class="kpi-val" style="color:${sc.base_case.return_pct >= 0 ? 'var(--emerald-dark)' : 'var(--danger)'}">
+                  ${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%
+                </span>
+                <small>Est. Value: ${inr(sc.base_case.projected_value)}</small>
+              </div>
+              <div class="kpi-tile" style="background:#fff5f2; border-color:var(--blush-dark);">
+                <span class="kpi-name">Max Downside Risk (95% VaR)</span>
+                <span class="kpi-val" style="color:var(--danger)">-${varLoss.max_loss_pct}%</span>
+                <small style="color:var(--danger);">Max Probable Loss: ₹${Math.round(varLoss.max_loss_capital).toLocaleString('en-IN')}</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Bull Momentum Target</span>
+                <span class="kpi-val" style="color:var(--gold-dark);">$${sc.bull_case.target_price}</span>
+                <small style="color:var(--gold-dark); font-weight:600;">+${sc.bull_case.return_pct}% Upside</small>
+              </div>
+            </div>
+
+            <!-- 3-Way Scenario Matrix Table -->
+            <b style="font-size:14px; color:var(--gold-dark);">Scenario Forecast Matrix (${h} Days Horizon on ₹${cap.toLocaleString('en-IN')} Capital)</b>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Target Price</th>
+                  <th>Projected Return %</th>
+                  <th>Estimated Capital Value</th>
+                  <th>Net Profit / Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f4fbf7;">
+                  <td><b>🚀 Bull Case (High Momentum)</b></td>
+                  <td><b>$${sc.bull_case.target_price}</b></td>
+                  <td style="color:var(--emerald); font-weight:700;">+${sc.bull_case.return_pct}%</td>
+                  <td>${inr(sc.bull_case.projected_value)}</td>
+                  <td style="color:var(--emerald); font-weight:600;">+${inr(sc.bull_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fffcf5;">
+                  <td><b>📈 Base Case (Expected Median)</b></td>
+                  <td><b>$${sc.base_case.target_price}</b></td>
+                  <td style="font-weight:700;">${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%</td>
+                  <td>${inr(sc.base_case.projected_value)}</td>
+                  <td style="font-weight:600;">${inr(sc.base_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fff6f4;">
+                  <td><b>🛡️ Bear Case (Market Drawdown)</b></td>
+                  <td><b>$${sc.bear_case.target_price}</b></td>
+                  <td style="color:var(--danger); font-weight:700;">${sc.bear_case.return_pct}%</td>
+                  <td>${inr(sc.bear_case.projected_value)}</td>
+                  <td style="color:var(--danger); font-weight:600;">-${inr(sc.bear_case.loss_amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Telugu & English Executive Actionable Advice -->
+            <div style="background:rgba(255, 250, 240, 0.9); border-left:4px solid var(--gold); border-radius:6px; padding:12px; margin-top:14px; font-size:13.5px; line-height:1.6;">
+              <b>AI Decision Advisory:</b><br>
+              ${esc(res.telugu_advice)}
+            </div>
+            <div class="disclaimer-bar" style="margin-top:10px;">
+              ${esc(res.disclaimer)}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="out-box" style="color:var(--danger)">Error running investment analysis: ${esc(e.message)}</div>`;
+      }
+    }
+
+    // Live Commodities
+    async function fetchLiveCommodity(name) {
+      try {
+        const res = await api(`market/commodity?name=${name}`);
+        if (res.status === 'ok') {
+          if (name === 'oil') $('#oil-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'gold') $('#gold-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'silver') $('#silver-price-display').textContent = '$' + res.price.toFixed(2);
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // Alpaca Paper Trading
+    async function loadAlpacaData() {
+      try {
+        const acc = await api('market/alpaca/account');
+        if (acc.status === 'ok') {
+          $('#alpaca-cash').textContent = '$' + acc.cash_balance.toLocaleString();
+          $('#alpaca-equity').textContent = '$' + acc.portfolio_equity.toLocaleString();
+          $('#alpaca-bp').textContent = '$' + acc.buying_power.toLocaleString();
+          $('#alpaca-status-badge').textContent = `Alpaca Status: ${acc.status_text}`;
+        }
+
+        const pos = await api('market/alpaca/positions');
+        if (pos.status === 'ok') {
+          if (pos.positions.length === 0) {
+            $('#alpaca-positions-container').innerHTML = '<div style="color:var(--mute); font-size:13px;">No open positions in Alpaca sandbox. Submit an order to buy shares.</div>';
+          } else {
+            let r = '';
+            for (const p of pos.positions) {
+              r += `<tr><td><b>${esc(p.symbol)}</b></td><td>${p.qty}</td><td>$${p.current_price}</td><td style="color:${p.unrealized_pl >= 0 ? 'var(--emerald)' : 'var(--danger)'}">${p.unrealized_plpc}</td></tr>`;
+            }
+            $('#alpaca-positions-container').innerHTML = `<table><thead><tr><th>Asset</th><th>Qty</th><th>Price</th><th>P&L</th></tr></thead><tbody>${r}</tbody></table>`;
+          }
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitAlpacaOrder() {
+      const sym = $('#alp-sym').value.trim() || 'AMZN';
+      const qty = +$('#alp-qty').value || 1;
+      const side = $('#alp-side').value || 'buy';
+      const out = $('#alpaca-order-status');
+      out.textContent = `Submitting real paper ${side.toUpperCase()} order for ${qty} shares of ${sym} to Alpaca API...`;
+
+      try {
+        const res = await api('market/alpaca/order', { symbol: sym, qty, side });
+        out.textContent = JSON.stringify(res, null, 2);
+        loadAlpacaData();
+      } catch (e) {
+        out.textContent = 'Order Failed: ' + e.message;
+      }
+    }
+
+    async function renderIpoPipeline() {
+      try {
+        const res = await api('market/ipos');
+        if (res.ipos) {
+          let rows = '';
+          for (const ipo of res.ipos) {
+            rows += `<tr><td><b>${esc(ipo.company)}</b><br><small style="color:var(--mute)">${esc(ipo.exchange)}</small></td><td>${esc(ipo.issue_size)}</td><td><span class="tag actual">${esc(ipo.status)}</span></td></tr>`;
+          }
+          $('#ipo-pipeline-table').innerHTML = `<table><thead><tr><th>Company</th><th>Size</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    loadAlpacaData();
+    renderIpoPipeline();
+    fetchLiveCommodity('oil');
+    fetchLiveCommodity('gold');
+    fetchLiveCommodity('silver');
+    loadData();
       } catch (e) { $('#auth-out').textContent = e.message; }
     }
 
+    
+    // Investment Prediction Engine
+    async function runInvestmentAnalysis() {
+      const sym = $('#inv-symbol').value.trim() || 'AMZN';
+      const cap = +$('#inv-capital').value || 100000;
+      const h = +$('#inv-horizon').value || 90;
+      const container = $('#inv-results-container');
+      container.innerHTML = '<div style="padding:15px; text-align:center;">Querying live exchange feeds and running probability model for ' + sym + '...</div>';
+
+      try {
+        const res = await api(`market/invest?symbol=${encodeURIComponent(sym)}&horizon_days=${h}&capital=${cap}`);
+        if (res.status === 'error') {
+          container.innerHTML = `<div class="out-box" style="color:var(--danger)">${esc(res.error)}</div>`;
+          return;
+        }
+
+        const sc = res.scenarios;
+        const varLoss = res.max_drawdown_risk_95_var;
+        const winProb = res.win_probability_pct;
+        const isBullish = winProb >= 60;
+
+        container.innerHTML = `
+          <div style="background:#fff; border:1px solid var(--gold-border); border-radius:14px; padding:18px; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+            <!-- Top Summary Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #ebdcbc; padding-bottom:12px;">
+              <div>
+                <span style="font:700 24px Georgia, serif; color:var(--ink);">${esc(res.symbol)}</span>
+                <span style="font-size:16px; margin-left:8px; font-weight:600;">$${res.current_price.toLocaleString()}</span>
+                <span class="tag actual" style="margin-left:8px;">Live Quote</span>
+              </div>
+              <div>
+                <span class="tag ${isBullish ? 'actual' : 'warning'}" style="font-size:12px; padding:4px 14px;">
+                  ${esc(res.rating)} (${esc(res.verdict)})
+                </span>
+              </div>
+            </div>
+
+            <!-- Key Probabilities Grid -->
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin: 16px 0;">
+              <div class="kpi-tile" style="background:#f4fbf7; border-color:var(--emerald);">
+                <span class="kpi-name">Success / Win Probability</span>
+                <span class="kpi-val" style="color:var(--emerald-dark);">${winProb}%</span>
+                <small style="color:var(--emerald); font-weight:600;">Probability of Profit</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Expected Return (${h} Days)</span>
+                <span class="kpi-val" style="color:${sc.base_case.return_pct >= 0 ? 'var(--emerald-dark)' : 'var(--danger)'}">
+                  ${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%
+                </span>
+                <small>Est. Value: ${inr(sc.base_case.projected_value)}</small>
+              </div>
+              <div class="kpi-tile" style="background:#fff5f2; border-color:var(--blush-dark);">
+                <span class="kpi-name">Max Downside Risk (95% VaR)</span>
+                <span class="kpi-val" style="color:var(--danger)">-${varLoss.max_loss_pct}%</span>
+                <small style="color:var(--danger);">Max Probable Loss: ₹${Math.round(varLoss.max_loss_capital).toLocaleString('en-IN')}</small>
+              </div>
+              <div class="kpi-tile">
+                <span class="kpi-name">Bull Momentum Target</span>
+                <span class="kpi-val" style="color:var(--gold-dark);">$${sc.bull_case.target_price}</span>
+                <small style="color:var(--gold-dark); font-weight:600;">+${sc.bull_case.return_pct}% Upside</small>
+              </div>
+            </div>
+
+            <!-- 3-Way Scenario Matrix Table -->
+            <b style="font-size:14px; color:var(--gold-dark);">Scenario Forecast Matrix (${h} Days Horizon on ₹${cap.toLocaleString('en-IN')} Capital)</b>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Target Price</th>
+                  <th>Projected Return %</th>
+                  <th>Estimated Capital Value</th>
+                  <th>Net Profit / Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#f4fbf7;">
+                  <td><b>🚀 Bull Case (High Momentum)</b></td>
+                  <td><b>$${sc.bull_case.target_price}</b></td>
+                  <td style="color:var(--emerald); font-weight:700;">+${sc.bull_case.return_pct}%</td>
+                  <td>${inr(sc.bull_case.projected_value)}</td>
+                  <td style="color:var(--emerald); font-weight:600;">+${inr(sc.bull_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fffcf5;">
+                  <td><b>📈 Base Case (Expected Median)</b></td>
+                  <td><b>$${sc.base_case.target_price}</b></td>
+                  <td style="font-weight:700;">${sc.base_case.return_pct >= 0 ? '+' : ''}${sc.base_case.return_pct}%</td>
+                  <td>${inr(sc.base_case.projected_value)}</td>
+                  <td style="font-weight:600;">${inr(sc.base_case.gain_amount)}</td>
+                </tr>
+                <tr style="background:#fff6f4;">
+                  <td><b>🛡️ Bear Case (Market Drawdown)</b></td>
+                  <td><b>$${sc.bear_case.target_price}</b></td>
+                  <td style="color:var(--danger); font-weight:700;">${sc.bear_case.return_pct}%</td>
+                  <td>${inr(sc.bear_case.projected_value)}</td>
+                  <td style="color:var(--danger); font-weight:600;">-${inr(sc.bear_case.loss_amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Telugu & English Executive Actionable Advice -->
+            <div style="background:rgba(255, 250, 240, 0.9); border-left:4px solid var(--gold); border-radius:6px; padding:12px; margin-top:14px; font-size:13.5px; line-height:1.6;">
+              <b>AI Decision Advisory:</b><br>
+              ${esc(res.telugu_advice)}
+            </div>
+            <div class="disclaimer-bar" style="margin-top:10px;">
+              ${esc(res.disclaimer)}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = `<div class="out-box" style="color:var(--danger)">Error running investment analysis: ${esc(e.message)}</div>`;
+      }
+    }
+
+    // Live Commodities
+    async function fetchLiveCommodity(name) {
+      try {
+        const res = await api(`market/commodity?name=${name}`);
+        if (res.status === 'ok') {
+          if (name === 'oil') $('#oil-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'gold') $('#gold-price-display').textContent = '$' + res.price.toFixed(2);
+          if (name === 'silver') $('#silver-price-display').textContent = '$' + res.price.toFixed(2);
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // Alpaca Paper Trading
+    async function loadAlpacaData() {
+      try {
+        const acc = await api('market/alpaca/account');
+        if (acc.status === 'ok') {
+          $('#alpaca-cash').textContent = '$' + acc.cash_balance.toLocaleString();
+          $('#alpaca-equity').textContent = '$' + acc.portfolio_equity.toLocaleString();
+          $('#alpaca-bp').textContent = '$' + acc.buying_power.toLocaleString();
+          $('#alpaca-status-badge').textContent = `Alpaca Status: ${acc.status_text}`;
+        }
+
+        const pos = await api('market/alpaca/positions');
+        if (pos.status === 'ok') {
+          if (pos.positions.length === 0) {
+            $('#alpaca-positions-container').innerHTML = '<div style="color:var(--mute); font-size:13px;">No open positions in Alpaca sandbox. Submit an order to buy shares.</div>';
+          } else {
+            let r = '';
+            for (const p of pos.positions) {
+              r += `<tr><td><b>${esc(p.symbol)}</b></td><td>${p.qty}</td><td>$${p.current_price}</td><td style="color:${p.unrealized_pl >= 0 ? 'var(--emerald)' : 'var(--danger)'}">${p.unrealized_plpc}</td></tr>`;
+            }
+            $('#alpaca-positions-container').innerHTML = `<table><thead><tr><th>Asset</th><th>Qty</th><th>Price</th><th>P&L</th></tr></thead><tbody>${r}</tbody></table>`;
+          }
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitAlpacaOrder() {
+      const sym = $('#alp-sym').value.trim() || 'AMZN';
+      const qty = +$('#alp-qty').value || 1;
+      const side = $('#alp-side').value || 'buy';
+      const out = $('#alpaca-order-status');
+      out.textContent = `Submitting real paper ${side.toUpperCase()} order for ${qty} shares of ${sym} to Alpaca API...`;
+
+      try {
+        const res = await api('market/alpaca/order', { symbol: sym, qty, side });
+        out.textContent = JSON.stringify(res, null, 2);
+        loadAlpacaData();
+      } catch (e) {
+        out.textContent = 'Order Failed: ' + e.message;
+      }
+    }
+
+    async function renderIpoPipeline() {
+      try {
+        const res = await api('market/ipos');
+        if (res.ipos) {
+          let rows = '';
+          for (const ipo of res.ipos) {
+            rows += `<tr><td><b>${esc(ipo.company)}</b><br><small style="color:var(--mute)">${esc(ipo.exchange)}</small></td><td>${esc(ipo.issue_size)}</td><td><span class="tag actual">${esc(ipo.status)}</span></td></tr>`;
+          }
+          $('#ipo-pipeline-table').innerHTML = `<table><thead><tr><th>Company</th><th>Size</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    loadAlpacaData();
+    renderIpoPipeline();
+    fetchLiveCommodity('oil');
+    fetchLiveCommodity('gold');
+    fetchLiveCommodity('silver');
     loadData();
   </script>
 </body>
