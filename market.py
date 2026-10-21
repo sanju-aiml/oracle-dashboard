@@ -18,12 +18,31 @@ ALPACA_KEY_ID = os.environ.get("ALPACA_KEY_ID", "PK6TNORQEULB2TSISAHRK6NXR2")
 ALPACA_SECRET_KEY = os.environ.get("ALPACA_SECRET_KEY", "684dE22gzqDFjR46j5fiWGyvxM8azYJ1Zfs4F45SSD26")
 ALPACA_BASE_URL = os.environ.get("ALPACA_BASE_URL", "https://paper-api.alpaca.markets/v2")
 
+# In-memory TTL Cache to protect API rate limits and ensure instant responses
+_CACHE = {}
+
+def _cached(key, ttl_seconds, fetch_fn):
+    now = time.time()
+    if key in _CACHE:
+        val, expire_at = _CACHE[key]
+        if now < expire_at:
+            return val
+    try:
+        res = fetch_fn()
+        if isinstance(res, dict) and res.get("status") == "ok":
+            _CACHE[key] = (res, now + ttl_seconds)
+        return res
+    except Exception as e:
+        if key in _CACHE:
+            return _CACHE[key][0]
+        return {"status": "error", "error": str(e)[:100]}
+
 def _http_get(url, headers=None):
     hdrs = {"User-Agent": "oracle/2.0"}
     if headers:
         hdrs.update(headers)
     req = urllib.request.Request(url, headers=hdrs)
-    with urllib.request.urlopen(req, timeout=10) as r:
+    with urllib.request.urlopen(req, timeout=4) as r:
         return json.load(r)
 
 def _http_post(url, data_dict, headers=None):
@@ -32,7 +51,7 @@ def _http_post(url, data_dict, headers=None):
         hdrs.update(headers)
     b = json.dumps(data_dict).encode("utf-8")
     req = urllib.request.Request(url, data=b, headers=hdrs, method="POST")
-    with urllib.request.urlopen(req, timeout=12) as r:
+    with urllib.request.urlopen(req, timeout=4) as r:
         return json.load(r)
 
 # ==========================================
@@ -524,3 +543,412 @@ class PaperTradingEngine:
             "positions": self.portfolio,
             "recent_trades": self.trades[-5:]
         }
+
+
+# ==========================================
+# 5. OHLCV CANDLESTICK DATA
+# ==========================================
+def get_ohlcv(symbol="AMZN", interval="1day", outputsize=60):
+    """Fetch OHLCV time series from TwelveData for candlestick charts."""
+    sym = (symbol or "AMZN").upper().strip()
+    try:
+        url = (
+            f"https://api.twelvedata.com/time_series"
+            f"?symbol={urllib.request.quote(sym)}"
+            f"&interval={interval}&outputsize={outputsize}"
+            f"&apikey={TWELVEDATA_KEY}"
+        )
+        d = _http_get(url)
+        if d.get("status") == "error":
+            return {"status": "error", "error": d.get("message", "TwelveData error")}
+        values = d.get("values", [])
+        candles = []
+        for v in values:
+            candles.append({
+                "datetime": v.get("datetime"),
+                "open": float(v.get("open", 0)),
+                "high": float(v.get("high", 0)),
+                "low": float(v.get("low", 0)),
+                "close": float(v.get("close", 0)),
+                "volume": int(float(v.get("volume", 0)))
+            })
+        meta = d.get("meta", {})
+        return {
+            "status": "ok",
+            "kind": "actual",
+            "symbol": sym,
+            "interval": interval,
+            "exchange": meta.get("exchange", ""),
+            "currency": meta.get("currency", "USD"),
+            "source": "TwelveData Historical OHLCV",
+            "candles": candles
+        }
+    except Exception as e:
+        return {"status": "error", "error": f"OHLCV fetch failed: {str(e)[:100]}"}
+
+# ==========================================
+# 6. CRYPTO PRICES (BTC, ETH, etc.)
+# ==========================================
+def get_crypto_price(symbol="BTC"):
+    """Fetch real-time cryptocurrency price from TwelveData."""
+    sym = symbol.upper().strip()
+    pair = f"{sym}/USD"
+    try:
+        url = f"https://api.twelvedata.com/price?symbol={urllib.request.quote(pair)}&apikey={TWELVEDATA_KEY}"
+        d = _http_get(url)
+        if "price" in d:
+            price = float(d["price"])
+            return {
+                "status": "ok",
+                "kind": "actual",
+                "symbol": sym,
+                "pair": pair,
+                "price": round(price, 2),
+                "currency": "USD",
+                "source": "TwelveData Crypto Realtime",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+            }
+    except Exception as e:
+        pass
+    # Finnhub fallback for crypto
+    try:
+        url = f"https://finnhub.io/api/v1/quote?symbol=BINANCE:{sym}USDT&token={FINNHUB_KEY}"
+        d = _http_get(url)
+        if d.get("c", 0) > 0:
+            return {
+                "status": "ok",
+                "kind": "actual",
+                "symbol": sym,
+                "pair": f"{sym}/USDT",
+                "price": round(float(d["c"]), 2),
+                "change_pct": f"{float(d.get('dp', 0)):+.2f}%",
+                "currency": "USDT",
+                "source": "Finnhub Crypto (Binance)",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+            }
+    except Exception:
+        pass
+    return {"status": "error", "error": f"Crypto price unavailable for {sym}"}
+
+# ==========================================
+# 7. FOREX / INDIA MARKET
+# ==========================================
+def get_forex(from_currency="USD", to_currency="INR"):
+    """Fetch live forex rate from TwelveData."""
+    pair = f"{from_currency.upper()}/{to_currency.upper()}"
+    try:
+        url = f"https://api.twelvedata.com/price?symbol={urllib.request.quote(pair)}&apikey={TWELVEDATA_KEY}"
+        d = _http_get(url)
+        if "price" in d:
+            return {
+                "status": "ok",
+                "kind": "actual",
+                "pair": pair,
+                "rate": round(float(d["price"]), 4),
+                "from": from_currency.upper(),
+                "to": to_currency.upper(),
+                "source": "TwelveData Forex Realtime",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+            }
+    except Exception as e:
+        pass
+    return {"status": "error", "error": f"Forex rate unavailable for {pair}"}
+
+def get_india_index(index="NIFTY 50"):
+    """Fetch Indian market indices: NIFTY 50, SENSEX via TwelveData."""
+    # TwelveData symbols for India indices
+    index_map = {
+        "nifty": "NIFTY:NSE",
+        "nifty 50": "NIFTY:NSE",
+        "nifty50": "NIFTY:NSE",
+        "sensex": "BSE:BSE",
+        "bse": "BSE:BSE",
+    }
+    sym = index_map.get(index.lower().strip(), index)
+    try:
+        url = f"https://api.twelvedata.com/price?symbol={urllib.request.quote(sym)}&apikey={TWELVEDATA_KEY}"
+        d = _http_get(url)
+        if "price" in d:
+            return {
+                "status": "ok",
+                "kind": "actual",
+                "index": index,
+                "symbol": sym,
+                "price": round(float(d["price"]), 2),
+                "currency": "INR",
+                "source": "TwelveData India Markets",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+            }
+    except Exception as e:
+        pass
+    return {"status": "error", "error": f"India index '{index}' unavailable. TwelveData may not support this on free tier."}
+
+# ==========================================
+# 8. NATURAL GAS & COMMODITY EXTENSIONS
+# ==========================================
+def get_natural_gas():
+    """Fetch natural gas price via OilPriceAPI."""
+    try:
+        url = "https://api.oilpriceapi.com/v1/prices/latest?by_code=NATURAL_GAS_USD"
+        d = _http_get(url, {"Authorization": f"Token {OILPRICE_KEY}"})
+        p = d.get("data", {}).get("price")
+        if p:
+            return {
+                "status": "ok",
+                "kind": "actual",
+                "commodity": "Natural Gas",
+                "symbol": "NATURAL_GAS_USD",
+                "price": round(float(p), 4),
+                "unit": "USD per MMBtu",
+                "currency": "USD",
+                "source": "OilPriceAPI Live Feed",
+                "as_of": d.get("data", {}).get("created_at", time.strftime("%Y-%m-%d %H:%M:%S"))
+            }
+    except Exception as e:
+        pass
+    return {"status": "error", "error": "Natural gas price unavailable"}
+
+# ==========================================
+# 9. COMPANY FUNDAMENTALS & NEWS (Finnhub)
+# ==========================================
+def get_company_profile(symbol="AAPL"):
+    """Fetch company fundamentals from Finnhub."""
+    sym = symbol.upper().strip()
+    try:
+        url = f"https://finnhub.io/api/v1/stock/profile2?symbol={urllib.request.quote(sym)}&token={FINNHUB_KEY}"
+        d = _http_get(url)
+        if d.get("name"):
+            return {
+                "status": "ok",
+                "kind": "actual",
+                "symbol": sym,
+                "name": d.get("name"),
+                "country": d.get("country"),
+                "exchange": d.get("exchange"),
+                "industry": d.get("finnhubIndustry"),
+                "ipo_date": d.get("ipo"),
+                "logo": d.get("logo"),
+                "market_cap_usd": d.get("marketCapitalization"),
+                "shares_outstanding": d.get("shareOutstanding"),
+                "currency": d.get("currency"),
+                "website": d.get("weburl"),
+                "ticker": d.get("ticker"),
+                "source": "Finnhub Company Fundamentals",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S")
+            }
+        return {"status": "error", "error": f"No profile data for {sym}. May be private or delisted."}
+    except Exception as e:
+        return {"status": "error", "error": f"Profile fetch failed: {str(e)[:80]}"}
+
+def get_company_news(symbol="AAPL", count=5):
+    """Fetch recent company news from Finnhub."""
+    sym = symbol.upper().strip()
+    try:
+        from_date = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 7 * 86400))
+        to_date = time.strftime("%Y-%m-%d", time.gmtime())
+        url = (
+            f"https://finnhub.io/api/v1/company-news"
+            f"?symbol={urllib.request.quote(sym)}"
+            f"&from={from_date}&to={to_date}"
+            f"&token={FINNHUB_KEY}"
+        )
+        items = _http_get(url)
+        news = []
+        for item in items[:count]:
+            news.append({
+                "headline": item.get("headline"),
+                "summary": item.get("summary", "")[:300],
+                "source": item.get("source"),
+                "url": item.get("url"),
+                "datetime": time.strftime("%Y-%m-%d %H:%M", time.gmtime(item.get("datetime", 0))),
+                "sentiment": "bullish" if item.get("sentiment", 0) > 0.2 else ("bearish" if item.get("sentiment", 0) < -0.2 else "neutral")
+            })
+        return {
+            "status": "ok",
+            "kind": "actual",
+            "symbol": sym,
+            "news_count": len(news),
+            "news": news,
+            "source": "Finnhub Company News",
+            "period": f"{from_date} to {to_date}"
+        }
+    except Exception as e:
+        return {"status": "error", "error": f"News fetch failed: {str(e)[:80]}"}
+
+def get_stock_metrics(symbol="AAPL"):
+    """Fetch key financial metrics from Finnhub (P/E, ROE, EPS, etc.)."""
+    sym = symbol.upper().strip()
+    try:
+        url = f"https://finnhub.io/api/v1/stock/metric?symbol={urllib.request.quote(sym)}&metric=all&token={FINNHUB_KEY}"
+        d = _http_get(url)
+        m = d.get("metric", {})
+        if m:
+            return {
+                "status": "ok",
+                "kind": "actual",
+                "symbol": sym,
+                "pe_ratio": m.get("peBasicExclExtraTTM"),
+                "eps_ttm": m.get("epsBasicExclExtraAnnual"),
+                "roe": m.get("roeRfy"),
+                "revenue_ttm_usd": m.get("revenuePerShareAnnual"),
+                "52w_high": m.get("52WeekHigh"),
+                "52w_low": m.get("52WeekLow"),
+                "beta": m.get("beta"),
+                "dividend_yield": m.get("dividendYieldIndicatedAnnual"),
+                "book_value_per_share": m.get("bookValuePerShareAnnual"),
+                "debt_equity": m.get("totalDebt/totalEquityAnnual"),
+                "source": "Finnhub Financial Metrics",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S")
+            }
+        return {"status": "error", "error": f"No metrics for {sym}"}
+    except Exception as e:
+        return {"status": "error", "error": f"Metrics fetch failed: {str(e)[:80]}"}
+
+# ==========================================
+# 10. WATCHLIST LIVE PRICES
+# ==========================================
+def get_watchlist_prices(symbols):
+    """Fetch live prices for a list of symbols (for watchlist polling)."""
+    results = []
+    for sym in symbols[:20]:  # cap at 20 to protect rate limits
+        q = get_live_stock(sym)
+        results.append({
+            "symbol": sym,
+            "price": q.get("price"),
+            "change": q.get("change"),
+            "change_percent": q.get("change_percent"),
+            "status": q.get("status", "error"),
+            "error": q.get("error"),
+            "source": q.get("source"),
+            "as_of": q.get("as_of")
+        })
+    return {"status": "ok", "kind": "actual", "prices": results}
+
+# ==========================================
+# 11. MARKET OVERVIEW (for dashboard ticker)
+# ==========================================
+def _raw_market_overview():
+    """Fetch a snapshot of global market overview: top indices, gold, oil, crypto, forex."""
+    results = {}
+    # US Indices (via Finnhub or TwelveData)
+    for sym in ["SPY", "QQQ", "DIA"]:
+        try:
+            q = get_live_stock(sym)
+            if q.get("status") == "ok":
+                results[sym] = {"price": q["price"], "change_pct": q.get("change_percent", "0%"), "kind": "actual"}
+        except Exception:
+            pass
+    # Gold
+    try:
+        g = get_live_commodity("gold")
+        if g.get("status") == "ok":
+            results["GOLD"] = {"price": g["price"], "unit": "USD/troy oz", "kind": "actual"}
+    except Exception:
+        pass
+    # Oil
+    try:
+        o = get_live_commodity("oil")
+        if o.get("status") == "ok":
+            results["BRENT"] = {"price": o["price"], "unit": "USD/barrel", "kind": "actual"}
+    except Exception:
+        pass
+    # Bitcoin
+    try:
+        btc = get_crypto_price("BTC")
+        if btc.get("status") == "ok":
+            results["BTC"] = {"price": btc["price"], "unit": "USD", "kind": "actual"}
+    except Exception:
+        pass
+    # USD/INR
+    try:
+        fx = get_forex("USD", "INR")
+        if fx.get("status") == "ok":
+            results["USD/INR"] = {"rate": fx["rate"], "kind": "actual"}
+    except Exception:
+        pass
+    return {
+        "status": "ok",
+        "kind": "actual",
+        "market_overview": results,
+        "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "note": "Prices may be delayed 15 minutes on free tier. Labeled as actual when live feed is confirmed."
+    }
+
+# ==========================================
+# 12. WEB SEARCH (DuckDuckGo for chatbot)
+# ==========================================
+def web_search(query, max_results=5):
+    """Search the web using DuckDuckGo for real-time news and data."""
+    try:
+        from duckduckgo_search import DDGS
+        results = []
+        with DDGS() as ddgs:
+            for r in ddgs.text(query, max_results=max_results):
+                results.append({
+                    "title": r.get("title"),
+                    "body": r.get("body", "")[:400],
+                    "href": r.get("href")
+                })
+        return {"status": "ok", "query": query, "results": results}
+    except Exception as e:
+        return {"status": "error", "error": f"Web search failed: {str(e)[:100]}"}
+
+
+def get_market_overview():
+    return _cached("market_overview", 15, _raw_market_overview)
+
+
+# Cached wrappers for high-traffic functions
+_orig_get_live_stock = get_live_stock
+def get_live_stock(symbol="AMZN"):
+    sym = (symbol or "AMZN").upper().strip()
+    return _cached(f"stock_{sym}", 15, lambda: _orig_get_live_stock(sym))
+
+_orig_get_live_commodity = get_live_commodity
+def get_live_commodity(name="gold"):
+    k = (name or "gold").lower().strip()
+    return _cached(f"comm_{k}", 20, lambda: _orig_get_live_commodity(k))
+
+_orig_get_crypto_price = get_crypto_price
+def get_crypto_price(symbol="BTC"):
+    sym = (symbol or "BTC").upper().strip()
+    return _cached(f"crypto_{sym}", 15, lambda: _orig_get_crypto_price(sym))
+
+_orig_get_forex = get_forex
+def get_forex(from_currency="USD", to_currency="INR"):
+    pair = f"{from_currency}_{to_currency}".upper()
+    return _cached(f"forex_{pair}", 30, lambda: _orig_get_forex(from_currency, to_currency))
+
+_orig_get_india_index = get_india_index
+def get_india_index(index="NIFTY 50"):
+    idx = (index or "nifty").lower().strip()
+    return _cached(f"india_{idx}", 20, lambda: _orig_get_india_index(index))
+
+_orig_get_natural_gas = get_natural_gas
+def get_natural_gas():
+    return _cached("nat_gas", 30, _orig_get_natural_gas)
+
+_orig_get_ohlcv = get_ohlcv
+def get_ohlcv(symbol="AMZN", interval="1day", outputsize=60):
+    sym = (symbol or "AMZN").upper().strip()
+    return _cached(f"ohlcv_{sym}_{interval}_{outputsize}", 60, lambda: _orig_get_ohlcv(sym, interval, outputsize))
+
+_orig_get_company_profile = get_company_profile
+def get_company_profile(symbol="AAPL"):
+    sym = (symbol or "AAPL").upper().strip()
+    return _cached(f"prof_{sym}", 300, lambda: _orig_get_company_profile(sym))
+
+_orig_get_stock_metrics = get_stock_metrics
+def get_stock_metrics(symbol="AAPL"):
+    sym = (symbol or "AAPL").upper().strip()
+    return _cached(f"metrics_{sym}", 300, lambda: _orig_get_stock_metrics(sym))
+
+_orig_get_company_news = get_company_news
+def get_company_news(symbol="AAPL", count=5):
+    sym = (symbol or "AAPL").upper().strip()
+    return _cached(f"news_{sym}_{count}", 180, lambda: _orig_get_company_news(sym, count))
+
+_orig_web_search = web_search
+def web_search(query, max_results=5):
+    q = (query or "").strip().lower()
+    return _cached(f"search_{q}_{max_results}", 120, lambda: _orig_web_search(query, max_results))

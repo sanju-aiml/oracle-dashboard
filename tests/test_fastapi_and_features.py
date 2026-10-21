@@ -68,7 +68,6 @@ async def test_fastapi_billing_and_automations():
         assert r.status_code == 200
         assert len(r.json()["rules"]) >= 3
 
-
 @pytest.mark.asyncio
 async def test_fastapi_investment_and_alpaca():
     async with AsyncClient(transport=ASGITransport(app=server.app), base_url="http://test") as ac:
@@ -86,3 +85,37 @@ async def test_fastapi_investment_and_alpaca():
         r_alpaca = await ac.get("/api/market/alpaca/account")
         assert r_alpaca.status_code == 200
         assert r_alpaca.json()["status"] == "ok"
+
+@pytest.mark.asyncio
+async def test_fastapi_new_market_intelligence():
+    async with AsyncClient(transport=ASGITransport(app=server.app), base_url="http://test") as ac:
+        # Profile
+        r_prof = await ac.get("/api/market/profile?symbol=AAPL")
+        assert r_prof.status_code == 200
+        assert r_prof.json().get("kind") in ("actual", None) or "status" in r_prof.json()
+
+        # News
+        r_news = await ac.get("/api/market/news?symbol=AAPL&count=3")
+        assert r_news.status_code == 200
+        assert "news" in r_news.json()
+
+        # Forex
+        r_fx = await ac.get("/api/market/forex?from_currency=USD&to_currency=INR")
+        assert r_fx.status_code == 200
+        assert "status" in r_fx.json()
+
+        # Crypto
+        r_crypto = await ac.get("/api/market/crypto?symbol=BTC")
+        assert r_crypto.status_code == 200
+        assert "status" in r_crypto.json()
+
+        # Web Search
+        r_search = await ac.get("/api/search?q=Apple+stock+earnings")
+        assert r_search.status_code == 200
+        assert "results" in r_search.json()
+
+        # Chat with Web/Realtime queries
+        r_chat = await ac.post("/api/chat", json={"message": "what is bitcoin price"})
+        assert r_chat.status_code == 200
+        assert "reply" in r_chat.json()
+        assert len(r_chat.json()["reply"]) > 10

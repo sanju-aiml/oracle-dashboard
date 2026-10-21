@@ -95,6 +95,43 @@ class H(BaseHTTPRequestHandler):
                     return self.send(200, paper_trader.get_summary())
                 return self.send(200, paper_trader.execute_trade(body.get("symbol", ""), act, body.get("shares", 0), float(body.get("price", 0))))
                 
+            if r == "market/ohlcv":
+                return self.send(200, market.get_ohlcv(q.get("symbol", "AMZN"), q.get("interval", "1day"), int(q.get("outputsize", 60))))
+            if r == "market/crypto":
+                return self.send(200, market.get_crypto_price(q.get("symbol", "BTC")))
+            if r == "market/forex":
+                return self.send(200, market.get_forex(q.get("from", "USD"), q.get("to", "INR")))
+            if r == "market/india":
+                return self.send(200, market.get_india_index(q.get("index", "NIFTY 50")))
+            if r == "market/naturalgas":
+                return self.send(200, market.get_natural_gas())
+            if r == "market/profile":
+                return self.send(200, market.get_company_profile(q.get("symbol", "AAPL")))
+            if r == "market/news":
+                return self.send(200, market.get_company_news(q.get("symbol", "AAPL"), int(q.get("count", 5))))
+            if r == "market/metrics":
+                return self.send(200, market.get_stock_metrics(q.get("symbol", "AAPL")))
+            if r == "market/overview":
+                return self.send(200, market.get_market_overview())
+            if r == "search":
+                return self.send(200, market.web_search(q.get("q", "")))
+            if r == "watchlist":
+                usr = self.user()
+                if not usr: return self.send(401, {"error": "Please sign in"})
+                if method == "POST":
+                    return self.send(200, core.add_to_watchlist(usr, body.get("symbol", ""), body.get("note", "")))
+                elif method == "DELETE":
+                    return self.send(200, core.remove_from_watchlist(usr, q.get("symbol") or body.get("symbol", "")))
+                return self.send(200, core.get_watchlist(usr))
+            if r == "alerts":
+                usr = self.user()
+                if not usr: return self.send(401, {"error": "Please sign in"})
+                if method == "POST":
+                    return self.send(200, core.add_alert(usr, body.get("symbol", ""), body.get("condition", "above"), float(body.get("threshold", 0)), body.get("note", "")))
+                elif method == "DELETE":
+                    return self.send(200, core.delete_alert(usr, int(q.get("id") or body.get("id", 0))))
+                return self.send(200, core.list_alerts(usr))
+
             if r == "cricket":
                 return self.send(200, core.cricket())
             if r == "cricket/simulate":
@@ -327,6 +364,120 @@ try:
     @app.post("/api/market/alpaca/order")
     def api_alpaca_order(p: AlpacaOrderPayload):
         return market.place_alpaca_order(p.symbol, p.qty, p.side)
+
+    # OHLCV Candlestick Data
+    @app.get("/api/market/ohlcv")
+    def api_ohlcv(symbol: str = "AMZN", interval: str = "1day", outputsize: int = 60):
+        return market.get_ohlcv(symbol, interval, outputsize)
+
+    # Crypto Prices
+    @app.get("/api/market/crypto")
+    def api_crypto(symbol: str = "BTC"):
+        return market.get_crypto_price(symbol)
+
+    # Forex
+    @app.get("/api/market/forex")
+    def api_forex(from_currency: str = "USD", to_currency: str = "INR"):
+        return market.get_forex(from_currency, to_currency)
+
+    # India Indices
+    @app.get("/api/market/india")
+    def api_india_index(index: str = "NIFTY 50"):
+        return market.get_india_index(index)
+
+    # Natural Gas
+    @app.get("/api/market/naturalgas")
+    def api_natural_gas():
+        return market.get_natural_gas()
+
+    # Company Profile & Fundamentals
+    @app.get("/api/market/profile")
+    def api_company_profile(symbol: str = "AAPL"):
+        return market.get_company_profile(symbol)
+
+    # Company News
+    @app.get("/api/market/news")
+    def api_company_news(symbol: str = "AAPL", count: int = 5):
+        return market.get_company_news(symbol, count)
+
+    # Company Metrics (P/E, ROE, Beta, etc.)
+    @app.get("/api/market/metrics")
+    def api_stock_metrics(symbol: str = "AAPL"):
+        return market.get_stock_metrics(symbol)
+
+    # Market Overview (Global Snapshot)
+    @app.get("/api/market/overview")
+    def api_market_overview():
+        return market.get_market_overview()
+
+    # Web Search (DuckDuckGo)
+    @app.get("/api/search")
+    def api_web_search(q: str = ""):
+        return market.web_search(q)
+
+    # Watchlist Prices (batch)
+    class WatchlistPayload(BaseModel):
+        symbols: List[str]
+
+    @app.post("/api/market/watchlist-prices")
+    def api_watchlist_prices(p: WatchlistPayload):
+        return market.get_watchlist_prices(p.symbols)
+
+    # Watchlist (SQLite-backed)
+    class WatchlistAddPayload(BaseModel):
+        symbol: str
+        note: Optional[str] = ""
+
+    @app.post("/api/watchlist/add")
+    def api_watchlist_add(p: WatchlistAddPayload, user=Depends(require_user)):
+        return core.add_to_watchlist(user, p.symbol, p.note or "")
+
+    @app.get("/api/watchlist")
+    def api_watchlist_get(user=Depends(require_user)):
+        return core.get_watchlist(user)
+
+    @app.delete("/api/watchlist/{symbol}")
+    def api_watchlist_remove(symbol: str, user=Depends(require_user)):
+        return core.remove_from_watchlist(user, symbol)
+
+    # Alert management (SQLite-backed)
+    class AlertPayload(BaseModel):
+        symbol: str
+        condition: str = "above"   # above | below
+        threshold: float
+        note: Optional[str] = ""
+
+    @app.post("/api/alerts/add")
+    def api_alert_add(p: AlertPayload, user=Depends(require_user)):
+        return core.add_alert(user, p.symbol, p.condition, p.threshold, p.note or "")
+
+    @app.get("/api/alerts")
+    def api_alerts_list(user=Depends(require_user)):
+        return core.list_alerts(user)
+
+    @app.delete("/api/alerts/{alert_id}")
+    def api_alert_delete(alert_id: int, user=Depends(require_user)):
+        return core.delete_alert(user, alert_id)
+
+    # WebSocket for real-time live market & telemetry streaming
+    from fastapi import WebSocket, WebSocketDisconnect
+
+    @app.websocket("/ws/telemetry")
+    async def ws_telemetry(websocket: WebSocket):
+        await websocket.accept()
+        import asyncio
+        try:
+            while True:
+                # Send live market overview every 5 seconds
+                overview = await asyncio.to_thread(market.get_market_overview)
+                await websocket.send_json({
+                    "type": "market_tick",
+                    "timestamp": time.time(),
+                    "data": overview
+                })
+                await asyncio.sleep(8)
+        except (WebSocketDisconnect, Exception):
+            pass
 
     @app.get("/api/cricket")
     def api_cricket():

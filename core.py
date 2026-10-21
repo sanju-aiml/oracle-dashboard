@@ -522,7 +522,61 @@ def chat(msg, dash):
     if "profit" in m or "loss" in m:
         return "No tool can confirm profit or loss in advance. I can show backtested ranges and how often models beat a simple baseline."
         
-    return "Try: 'sip 5000 12 10', 'swp 1000000 8000 8 15', 'step up 10000 12 15 10', 'forecast', 'inventory status', 'data quality', 'gold price', 'cricket'. I answer only from verified data and deterministic math."
+    if any(w in m for w in ('bitcoin', 'btc', 'ethereum', 'eth', 'crypto')):
+        import market
+        sym = 'BTC'
+        if 'eth' in m or 'ethereum' in m: sym = 'ETH'
+        q = market.get_crypto_price(sym)
+        if q.get('status') == 'ok':
+            return f"{sym} Live Quote: ${q['price']:,.2f} USD as of {q['as_of']} ({q['source']}). Crypto carries extreme volatility; past performance is never a guarantee."
+        return f"Crypto price currently unavailable: {q.get('error', 'API error')}"
+
+    if any(w in m for w in ('sensex', 'nifty', 'india market', 'bse', 'nse')):
+        import market
+        idx = 'SENSEX' if 'sensex' in m or 'bse' in m else 'NIFTY 50'
+        q = market.get_india_index(idx)
+        if q.get('status') == 'ok':
+            return f"{idx}: {q['price']:,.2f} INR ({q['source']}, {q['as_of']})."
+        return f"India index '{idx}' unavailable: {q.get('error', 'check TwelveData')}"
+
+    if any(w in m for w in ('forex', 'usd inr', 'usd/inr', 'dollar', 'rupee', 'exchange rate')):
+        import market
+        q = market.get_forex('USD', 'INR')
+        if q.get('status') == 'ok':
+            return f"USD/INR Forex Rate: 1 USD = ₹{q['rate']} INR (Live from {q['source']} at {q['as_of']})."
+        return f"Forex rate unavailable: {q.get('error', 'API error')}"
+
+    if any(w in m for w in ('natural gas', 'gas price', 'lng')):
+        import market
+        q = market.get_natural_gas()
+        if q.get('status') == 'ok':
+            return f"Natural Gas: ${q['price']} {q['unit']} as of {q['as_of']} ({q['source']})."
+        return f"Natural gas price unavailable: {q.get('error', 'API error')}"
+
+    if any(w in m for w in ('news', 'latest news', 'headline')):
+        import market
+        words = msg.upper().split()
+        sym = None
+        for w in words:
+            clean = "".join(ch for ch in w if ch.isalnum())
+            if 1 <= len(clean) <= 5 and clean not in ('NEWS', 'LATEST', 'ABOUT', 'FOR', 'THE', 'AND', 'STOCK', 'WHAT', 'IS', 'GIVE', 'ME'):
+                sym = clean
+                break
+        if sym:
+            r = market.get_company_news(sym, 3)
+            if r.get('status') == 'ok' and r.get('news'):
+                headlines = '; '.join([f"{n['headline']} ({n['source']}, {n['datetime']})" for n in r['news'][:3]])
+                return f"Latest verified headlines for {sym}: {headlines}"
+            return f"No recent verified news found for {sym}."
+
+    if any(w in m for w in ('search', 'find', 'what is', 'who is', 'tell me about', 'how to', 'explain', 'realtime', 'live market', 'market today')):
+        import market
+        q = market.web_search(msg, max_results=3)
+        if q.get('status') == 'ok' and q['results']:
+            snippets = [f"• {r['title']}: {r['body']}" for r in q['results'][:2]]
+            return f"Real-time Web & Market Intelligence:\n" + "\n".join(snippets) + "\n\n[Source: Live Web Search Index]"
+
+    return "Try: 'sip 5000 12 10', 'swp 1000000 8000 8 15', 'step up 10000 12 15 10', 'forecast', 'invest AMZN 100000 90', 'gold price', 'bitcoin price', 'usd inr', 'AAPL news', 'search latest fed meeting', 'cricket'. Grounded strictly in verified calculations and live market feeds."
 
 # ---------- auth, workspaces, roles ----------
 def db():
@@ -598,3 +652,72 @@ def get_audit_trail(user):
     rows = c.execute("SELECT a.id, a.action, a.ts, u.email FROM audit a LEFT JOIN users u ON a.uid=u.id WHERE a.ws=? ORDER BY a.id DESC LIMIT 50", (user["ws"],)).fetchall()
     c.close()
     return [{"id": r["id"], "action": r["action"], "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(r["ts"])), "user": r["email"] or "system"} for r in rows]
+
+
+# ==========================================
+# WATCHLIST & ALERTS (SQLite-backed)
+# ==========================================
+def _ensure_watchlist_tables():
+    c = db()
+    c.execute('CREATE TABLE IF NOT EXISTS watchlist(id INTEGER PRIMARY KEY,ws INTEGER,uid INTEGER,symbol TEXT,note TEXT,added_at REAL,UNIQUE(ws,uid,symbol))')
+    c.execute('CREATE TABLE IF NOT EXISTS price_alerts(id INTEGER PRIMARY KEY,ws INTEGER,uid INTEGER,symbol TEXT,condition TEXT,threshold REAL,note TEXT,active INTEGER DEFAULT 1,triggered_at REAL,created_at REAL)')
+    c.commit(); c.close()
+
+def add_to_watchlist(user, symbol, note=''):
+    _ensure_watchlist_tables()
+    sym = symbol.upper().strip()
+    c = db()
+    try:
+        c.execute('INSERT OR IGNORE INTO watchlist(ws,uid,symbol,note,added_at) VALUES(?,?,?,?,?)', (user['ws'], user['uid'], sym, note, time.time()))
+        c.commit()
+        return {'status': 'ok', 'message': f'{sym} added to watchlist'}
+    except Exception as e:
+        return {'status': 'error', 'error': str(e)[:80]}
+    finally:
+        c.close()
+
+def get_watchlist(user):
+    _ensure_watchlist_tables()
+    c = db()
+    rows = c.execute('SELECT id,symbol,note,added_at FROM watchlist WHERE ws=? AND uid=? ORDER BY id DESC', (user['ws'], user['uid'])).fetchall()
+    c.close()
+    return {'status': 'ok', 'kind': 'actual', 'watchlist': [{'id': r['id'], 'symbol': r['symbol'], 'note': r['note'], 'added': time.strftime('%Y-%m-%d %H:%M', time.localtime(r['added_at']))} for r in rows]}
+
+def remove_from_watchlist(user, symbol):
+    _ensure_watchlist_tables()
+    sym = symbol.upper().strip()
+    c = db()
+    c.execute('DELETE FROM watchlist WHERE ws=? AND uid=? AND symbol=?', (user['ws'], user['uid'], sym))
+    c.commit(); c.close()
+    return {'status': 'ok', 'message': f'{sym} removed from watchlist'}
+
+def add_alert(user, symbol, condition, threshold, note=''):
+    _ensure_watchlist_tables()
+    sym = symbol.upper().strip()
+    if condition not in ('above', 'below'):
+        return {'status': 'error', 'error': 'condition must be above or below'}
+    c = db()
+    c.execute('INSERT INTO price_alerts(ws,uid,symbol,condition,threshold,note,active,created_at) VALUES(?,?,?,?,?,?,1,?)',
+              (user['ws'], user['uid'], sym, condition, float(threshold), note, time.time()))
+    c.commit(); c.close()
+    return {'status': 'ok', 'message': f'Alert set: {sym} {condition} {threshold}'}
+
+def list_alerts(user):
+    _ensure_watchlist_tables()
+    c = db()
+    rows = c.execute('SELECT id,symbol,condition,threshold,note,active,triggered_at,created_at FROM price_alerts WHERE ws=? AND uid=? ORDER BY id DESC LIMIT 50', (user['ws'], user['uid'])).fetchall()
+    c.close()
+    return {'status': 'ok', 'kind': 'actual', 'alerts': [{
+        'id': r['id'], 'symbol': r['symbol'], 'condition': r['condition'],
+        'threshold': r['threshold'], 'note': r['note'],
+        'active': bool(r['active']),
+        'triggered_at': time.strftime('%Y-%m-%d %H:%M', time.localtime(r['triggered_at'])) if r['triggered_at'] else None,
+        'created_at': time.strftime('%Y-%m-%d %H:%M', time.localtime(r['created_at']))
+    } for r in rows]}
+
+def delete_alert(user, alert_id):
+    _ensure_watchlist_tables()
+    c = db()
+    c.execute('DELETE FROM price_alerts WHERE id=? AND ws=? AND uid=?', (int(alert_id), user['ws'], user['uid']))
+    c.commit(); c.close()
+    return {'status': 'ok', 'message': f'Alert #{alert_id} deleted'}
