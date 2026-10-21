@@ -1,4 +1,5 @@
-﻿import os, json, mimetypes, time, base64
+import socket
+import os, json, mimetypes, time, base64
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import core, market, billing, automations
@@ -26,8 +27,17 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(b)))
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Connection", "close")
         self.end_headers()
-        self.wfile.write(b)
+        view = memoryview(b)
+        for i in range(0, len(b), 16384):
+            self.wfile.write(view[i:i+16384])
+        try:
+            self.wfile.flush()
+            self.connection.shutdown(socket.SHUT_WR)
+        except Exception:
+            pass
+        self.close_connection = True
         
     def user(self):
         auth_header = self.headers.get("Authorization", "")
@@ -70,25 +80,33 @@ class H(BaseHTTPRequestHandler):
                 else:
                     return self.send(404, {"error": "unknown calculator"})
                     
+            if r == "market/health":
+                return self.send(200, market.get_provider_health())
             if r == "market/quote":
-                return self.send(200, market.get_live_quote(q.get("kind", "stock"), q.get("symbol", "")))
+                return self.send(200, market.get_live_quote(q.get("kind", "stock"), q.get("symbol", ""), mode=q.get("mode", "live")))
             if r == "market/forecast":
                 return self.send(200, core.market_forecast(q.get("symbol", "")))
             if r == "market/ipos":
-                return self.send(200, market.get_ipos())
+                return self.send(200, market.get_ipos(mode=q.get("mode", "live")))
             if r == "market/invest":
                 sym = q.get("symbol") or body.get("symbol", "AMZN")
                 h_d = int(q.get("horizon_days") or body.get("horizon_days", 90))
                 cap = float(q.get("capital") or body.get("capital", 100000))
                 return self.send(200, market.analyze_investment(sym, h_d, cap))
             if r == "market/commodity":
-                return self.send(200, market.get_live_commodity(q.get("name", "gold")))
+                return self.send(200, market.get_live_commodity(q.get("name", "gold"), mode=q.get("mode", "live")))
             if r == "market/alpaca/account":
                 return self.send(200, market.get_alpaca_account())
             if r == "market/alpaca/positions":
                 return self.send(200, market.get_alpaca_positions())
             if r == "market/alpaca/order":
-                return self.send(200, market.place_alpaca_order(body.get("symbol", "AMZN"), int(body.get("qty", 1)), body.get("side", "buy")))
+                try:
+                    q_val = int(body.get("qty", 1))
+                    if q_val <= 0:
+                        return self.send(400, {"error": "Order quantity must be strictly greater than 0"})
+                except Exception:
+                    return self.send(400, {"error": "Invalid quantity"})
+                return self.send(200, market.place_alpaca_order(body.get("symbol", "AMZN"), q_val, body.get("side", "buy"), client_order_id=body.get("client_order_id")))
             if r == "market/paper-trade":
                 act = body.get("action", "summary")
                 if act == "summary":
@@ -96,7 +114,7 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, paper_trader.execute_trade(body.get("symbol", ""), act, body.get("shares", 0), float(body.get("price", 0))))
                 
             if r == "market/ohlcv":
-                return self.send(200, market.get_ohlcv(q.get("symbol", "AMZN"), q.get("interval", "1day"), int(q.get("outputsize", 60))))
+                return self.send(200, market.get_ohlcv(q.get("symbol", "AMZN"), q.get("interval", "1day"), int(q.get("outputsize", 60)), mode=q.get("mode", "live")))
             if r == "market/crypto":
                 return self.send(200, market.get_crypto_price(q.get("symbol", "BTC")))
             if r == "market/forex":
@@ -321,32 +339,37 @@ try:
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
+    @app.get("/api/market/health")
+    def api_market_health():
+        return market.get_provider_health()
+
     @app.get("/api/market/quote")
-    def api_market_quote(kind: str = "stock", symbol: str = ""):
-        return market.get_live_quote(kind, symbol)
+    def api_market_quote(kind: str = "stock", symbol: str = "", mode: str = "live"):
+        return market.get_live_quote(kind, symbol, mode=mode)
 
     @app.get("/api/market/forecast")
     def api_market_forecast(symbol: str = ""):
         return core.market_forecast(symbol)
 
     @app.get("/api/market/ipos")
-    def api_ipos():
-        return market.get_ipos()
+    def api_ipos(mode: str = "live"):
+        return market.get_ipos(mode=mode)
 
     class InvestPayload(BaseModel):
         symbol: str = "AMZN"
         horizon_days: int = 90
         capital: float = 100000.0
+        mode: Optional[str] = "live"
 
     @app.api_route("/api/market/invest", methods=["GET", "POST"])
-    def api_market_invest(symbol: str = "AMZN", horizon_days: int = 90, capital: float = 100000.0, p: Optional[InvestPayload] = None):
+    def api_market_invest(symbol: str = "AMZN", horizon_days: int = 90, capital: float = 100000.0, mode: str = "live", p: Optional[InvestPayload] = None):
         if p:
-            return market.analyze_investment(p.symbol, p.horizon_days, p.capital)
-        return market.analyze_investment(symbol, horizon_days, capital)
+            return market.analyze_investment(p.symbol, p.horizon_days, p.capital, mode=p.mode or "live")
+        return market.analyze_investment(symbol, horizon_days, capital, mode=mode)
 
     @app.get("/api/market/commodity")
-    def api_market_commodity(name: str = "gold"):
-        return market.get_live_commodity(name)
+    def api_market_commodity(name: str = "gold", mode: str = "live"):
+        return market.get_live_commodity(name, mode=mode)
 
     @app.get("/api/market/alpaca/account")
     def api_alpaca_account():
@@ -357,58 +380,73 @@ try:
         return market.get_alpaca_positions()
 
     class AlpacaOrderPayload(BaseModel):
-        symbol: str = "AMZN"
-        qty: int = 1
-        side: str = "buy"
+        symbol: str = Field(..., pattern=r"^[A-Za-z0-9.]{1,10}$")
+        qty: int = Field(..., gt=0, description="Quantity must be strictly positive integer (> 0)")
+        side: str = Field(..., pattern=r"^(buy|sell|BUY|SELL)$")
+        order_type: Optional[str] = "market"
+        time_in_force: Optional[str] = "day"
+        client_order_id: Optional[str] = None
 
     @app.post("/api/market/alpaca/order")
     def api_alpaca_order(p: AlpacaOrderPayload):
-        return market.place_alpaca_order(p.symbol, p.qty, p.side)
+        if p.qty <= 0:
+            raise HTTPException(status_code=400, detail="Order quantity must be strictly greater than 0")
+        res = market.place_alpaca_order(
+            symbol=p.symbol,
+            qty=p.qty,
+            side=p.side.lower(),
+            order_type=p.order_type or "market",
+            time_in_force=p.time_in_force or "day",
+            client_order_id=p.client_order_id
+        )
+        if res.get("status") == "error" and res.get("feed_status") == "validation_failed":
+            raise HTTPException(status_code=400, detail=res.get("error"))
+        return res
 
     # OHLCV Candlestick Data
     @app.get("/api/market/ohlcv")
-    def api_ohlcv(symbol: str = "AMZN", interval: str = "1day", outputsize: int = 60):
-        return market.get_ohlcv(symbol, interval, outputsize)
+    def api_ohlcv(symbol: str = "AMZN", interval: str = "1day", outputsize: int = 45, mode: str = "live"):
+        return market.get_ohlcv(symbol, interval, outputsize, mode=mode)
 
     # Crypto Prices
     @app.get("/api/market/crypto")
-    def api_crypto(symbol: str = "BTC"):
-        return market.get_crypto_price(symbol)
+    def api_crypto(symbol: str = "BTC", mode: str = "live"):
+        return market.get_crypto_price(symbol, mode=mode)
 
     # Forex
     @app.get("/api/market/forex")
-    def api_forex(from_currency: str = "USD", to_currency: str = "INR"):
-        return market.get_forex(from_currency, to_currency)
+    def api_forex(from_currency: str = "USD", to_currency: str = "INR", mode: str = "live"):
+        return market.get_forex(from_currency, to_currency, mode=mode)
 
     # India Indices
     @app.get("/api/market/india")
-    def api_india_index(index: str = "NIFTY 50"):
-        return market.get_india_index(index)
+    def api_india_index(index: str = "NIFTY 50", mode: str = "live"):
+        return market.get_india_index(index, mode=mode)
 
     # Natural Gas
     @app.get("/api/market/naturalgas")
-    def api_natural_gas():
-        return market.get_natural_gas()
+    def api_natural_gas(mode: str = "live"):
+        return market.get_natural_gas(mode=mode)
 
     # Company Profile & Fundamentals
     @app.get("/api/market/profile")
-    def api_company_profile(symbol: str = "AAPL"):
-        return market.get_company_profile(symbol)
+    def api_company_profile(symbol: str = "AAPL", mode: str = "live"):
+        return market.get_company_profile(symbol, mode=mode)
 
     # Company News
     @app.get("/api/market/news")
-    def api_company_news(symbol: str = "AAPL", count: int = 5):
-        return market.get_company_news(symbol, count)
+    def api_company_news(symbol: str = "AAPL", count: int = 5, mode: str = "live"):
+        return market.get_company_news(symbol, count, mode=mode)
 
     # Company Metrics (P/E, ROE, Beta, etc.)
     @app.get("/api/market/metrics")
-    def api_stock_metrics(symbol: str = "AAPL"):
-        return market.get_stock_metrics(symbol)
+    def api_stock_metrics(symbol: str = "AAPL", mode: str = "live"):
+        return market.get_stock_metrics(symbol, mode=mode)
 
     # Market Overview (Global Snapshot)
     @app.get("/api/market/overview")
-    def api_market_overview():
-        return market.get_market_overview()
+    def api_market_overview(mode: str = "live"):
+        return market.get_market_overview(mode=mode)
 
     # Web Search (DuckDuckGo)
     @app.get("/api/search")
@@ -418,10 +456,11 @@ try:
     # Watchlist Prices (batch)
     class WatchlistPayload(BaseModel):
         symbols: List[str]
+        mode: Optional[str] = "live"
 
     @app.post("/api/market/watchlist-prices")
     def api_watchlist_prices(p: WatchlistPayload):
-        return market.get_watchlist_prices(p.symbols)
+        return market.get_watchlist_prices(p.symbols, mode=p.mode or "live")
 
     # Watchlist (SQLite-backed)
     class WatchlistAddPayload(BaseModel):
@@ -459,24 +498,59 @@ try:
     def api_alert_delete(alert_id: int, user=Depends(require_user)):
         return core.delete_alert(user, alert_id)
 
-    # WebSocket for real-time live market & telemetry streaming
+    # WebSocket for real-time live market & telemetry streaming with subscription support
     from fastapi import WebSocket, WebSocketDisconnect
+    import asyncio
 
     @app.websocket("/ws/telemetry")
     async def ws_telemetry(websocket: WebSocket):
         await websocket.accept()
-        import asyncio
+        active_symbol = "AMZN"
+
+        async def receiver():
+            nonlocal active_symbol
+            try:
+                while True:
+                    msg = await websocket.receive_json()
+                    action = msg.get("action")
+                    if action == "subscribe" and msg.get("symbol"):
+                        new_sym = str(msg["symbol"]).upper().strip()
+                        if new_sym:
+                            active_symbol = new_sym
+                            quote = await asyncio.to_thread(market.get_live_stock, active_symbol)
+                            await websocket.send_json({
+                                "type": "symbol_quote",
+                                "requested_symbol": active_symbol,
+                                "data": quote
+                            })
+                    elif action == "unsubscribe":
+                        pass
+            except (WebSocketDisconnect, Exception):
+                pass
+
+        async def sender():
+            try:
+                while True:
+                    overview = await asyncio.to_thread(market.get_market_overview)
+                    await websocket.send_json({
+                        "type": "market_tick",
+                        "timestamp": time.time(),
+                        "data": overview
+                    })
+                    if active_symbol:
+                        sym_quote = await asyncio.to_thread(market.get_live_stock, active_symbol)
+                        await websocket.send_json({
+                            "type": "symbol_quote",
+                            "requested_symbol": active_symbol,
+                            "data": sym_quote
+                        })
+                    await asyncio.sleep(6)
+            except (WebSocketDisconnect, Exception):
+                pass
+
         try:
-            while True:
-                # Send live market overview every 5 seconds
-                overview = await asyncio.to_thread(market.get_market_overview)
-                await websocket.send_json({
-                    "type": "market_tick",
-                    "timestamp": time.time(),
-                    "data": overview
-                })
-                await asyncio.sleep(8)
-        except (WebSocketDisconnect, Exception):
+            await asyncio.gather(receiver(), sender())
+        except Exception:
             pass
 
     @app.get("/api/cricket")

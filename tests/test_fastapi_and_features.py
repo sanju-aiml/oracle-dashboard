@@ -39,10 +39,16 @@ async def test_fastapi_calculators():
 @pytest.mark.asyncio
 async def test_fastapi_market_and_cricket():
     async with AsyncClient(transport=ASGITransport(app=server.app), base_url="http://test") as ac:
+        # Live mode: returns honest not_configured when no official exchange filing API is connected
         r = await ac.get("/api/market/ipos")
         assert r.status_code == 200
-        ipos = r.json()["ipos"]
-        assert len(ipos) >= 3
+        assert r.json()["feed_status"] == "not_configured"
+
+        # Demo mode: returns isolated synthetic fixtures clearly labeled
+        r_demo = await ac.get("/api/market/ipos?mode=demo")
+        assert r_demo.status_code == 200
+        assert r_demo.json()["kind"] == "synthetic"
+        assert len(r_demo.json()["ipos"]) >= 3
 
         r = await ac.post("/api/cricket/simulate", json={
             "team1": "India", "team2": "Australia", "format": "T20",

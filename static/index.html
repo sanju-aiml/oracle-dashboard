@@ -470,7 +470,7 @@
           </p>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <input id="chart-symbol-input" value="AMZN" placeholder="Symbol (e.g. AMZN, NVDA, AAPL)" style="width:130px; text-transform:uppercase; font-weight:700; padding:6px 10px; font-size:13px;">
+          <input id="chart-symbol-input" value="AMZN" onchange="selectTicker(this.value)" placeholder="Symbol (e.g. AMZN, NVDA, AAPL)" style="width:130px; text-transform:uppercase; font-weight:700; padding:6px 10px; font-size:13px;">
           <select id="chart-interval-select" style="width:110px; padding:6px 8px; font-size:12.5px;" onchange="loadOhlcvData()">
             <option value="1day" selected>1 Day (Daily)</option>
             <option value="1h">1 Hour</option>
@@ -481,22 +481,22 @@
         </div>
       </div>
 
-      <!-- Quick Ticker Chips -->
+      <!-- Quick Ticker Chips (Unified Single Source of Truth) -->
       <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
-        <span class="chip" onclick="$('#chart-symbol-input').value='AMZN'; loadOhlcvData();">AMZN</span>
-        <span class="chip" onclick="$('#chart-symbol-input').value='NVDA'; loadOhlcvData();">NVDA</span>
-        <span class="chip" onclick="$('#chart-symbol-input').value='TSLA'; loadOhlcvData();">TSLA</span>
-        <span class="chip" onclick="$('#chart-symbol-input').value='AAPL'; loadOhlcvData();">AAPL</span>
-        <span class="chip" onclick="$('#chart-symbol-input').value='MSFT'; loadOhlcvData();">MSFT</span>
-        <span class="chip" onclick="$('#chart-symbol-input').value='GOOGL'; loadOhlcvData();">GOOGL</span>
-        <span class="chip" onclick="$('#chart-symbol-input').value='BTC/USD'; loadOhlcvData();">BTC/USD</span>
+        <span class="chip" onclick="selectTicker('AMZN')">AMZN</span>
+        <span class="chip" onclick="selectTicker('NVDA')">NVDA</span>
+        <span class="chip" onclick="selectTicker('TSLA')">TSLA</span>
+        <span class="chip" onclick="selectTicker('AAPL')">AAPL</span>
+        <span class="chip" onclick="selectTicker('MSFT')">MSFT</span>
+        <span class="chip" onclick="selectTicker('GOOGL')">GOOGL</span>
+        <span class="chip" onclick="selectTicker('BTC/USD')">BTC/USD</span>
       </div>
 
       <!-- Live Price & OHLC Bar -->
       <div style="display:flex; justify-content:space-between; align-items:center; background:var(--ivory-card); padding:8px 14px; border-radius:6px; margin-bottom:12px; font-size:13px; font-family:monospace;">
         <div>
           <span style="font-weight:700; font-size:16px;" id="cbar-symbol">AMZN</span>
-          <span style="margin-left:12px; font-size:18px; font-weight:700;" id="cbar-price">$262.63</span>
+          <span style="margin-left:12px; font-size:18px; font-weight:700;" id="cbar-price">Connecting...</span>
           <span id="cbar-change" style="margin-left:8px; font-weight:600; color:var(--emerald);">+1.45%</span>
         </div>
         <div style="display:flex; gap:16px; color:var(--ink-light);">
@@ -533,7 +533,7 @@
           <span style="font-weight:700; color:var(--ink);">🇮🇳 SENSEX (BSE)</span>
           <span class="tag actual" style="font-size:10px;">BSE Live</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="sensex-price">81,224.75</div>
+        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="sensex-price">Feed unavailable (license required)</div>
         <small style="color:var(--mute)">INR · Bombay Stock Exchange</small>
       </div>
 
@@ -543,7 +543,7 @@
           <span style="font-weight:700; color:var(--ink);">🇮🇳 NIFTY 50 (NSE)</span>
           <span class="tag actual" style="font-size:10px;">NSE Live</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="nifty-price">24,781.10</div>
+        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="nifty-price">Feed unavailable (license required)</div>
         <small style="color:var(--mute)">INR · National Stock Exchange</small>
       </div>
 
@@ -553,7 +553,7 @@
           <span style="font-weight:700; color:var(--ink);">💵 USD / INR</span>
           <span class="tag actual" style="font-size:10px;">Forex Spot</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--gold-dark); margin:6px 0;" id="forex-usd-inr">₹88.62</div>
+        <div style="font:700 22px Georgia, serif; color:var(--gold-dark); margin:6px 0;" id="forex-usd-inr">Connecting...</div>
         <small style="color:var(--mute)">1 US Dollar in Indian Rupees</small>
       </div>
 
@@ -563,7 +563,7 @@
           <span style="font-weight:700; color:var(--ink);">₿ Bitcoin (BTC)</span>
           <span class="tag actual" style="font-size:10px;">Crypto</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--emerald); margin:6px 0;" id="btc-price">$98,420.00</div>
+        <div style="font:700 22px Georgia, serif; color:var(--emerald); margin:6px 0;" id="btc-price">Connecting...</div>
         <small style="color:var(--mute)">USD · 24/7 Spot</small>
       </div>
 
@@ -573,7 +573,7 @@
           <span style="font-weight:700; color:var(--ink);">Ξ Ethereum (ETH)</span>
           <span class="tag actual" style="font-size:10px;">Crypto</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="eth-price">$3,450.00</div>
+        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="eth-price">Connecting...</div>
         <small style="color:var(--mute)">USD · Smart Contract Index</small>
       </div>
 
@@ -583,7 +583,7 @@
           <span style="font-weight:700; color:var(--ink);">🔥 Natural Gas</span>
           <span class="tag actual" style="font-size:10px;">Energy</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="natgas-price">$3.142</div>
+        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="natgas-price">Connecting...</div>
         <small style="color:var(--mute)">USD per MMBtu (OilPriceAPI)</small>
       </div>
     </div>
@@ -602,7 +602,7 @@
           <div class="grid" style="grid-template-columns: 2fr 1.5fr 1.5fr 1.8fr; margin-top:12px;">
             <div>
               <label>Stock / Asset Symbol
-                <input id="inv-symbol" value="AMZN" placeholder="e.g. AMZN, NVDA, TSLA, AAPL, MSFT, RELIANCE">
+                <input id="inv-symbol" value="AMZN" onchange="selectTicker(this.value)" placeholder="e.g. AMZN, NVDA, TSLA, AAPL, MSFT, RELIANCE">
               </label>
               <div style="display:flex; gap:6px; margin-top:4px;">
                 <span class="chip" onclick="$('#inv-symbol').value='AMZN'; runInvestmentAnalysis();">AMZN</span>
@@ -647,7 +647,7 @@
           <div class="card">
             <h3>🛢️ Brent Crude Oil Spot</h3>
             <div style="font-size:12px; color:var(--mute); margin-bottom:8px;">Live feed via OilPriceAPI</div>
-            <div style="font:700 28px Georgia, serif; color:var(--ink);" id="oil-price-display">$109.38</div>
+            <div style="font:700 28px Georgia, serif; color:var(--ink);" id="oil-price-display">Connecting...</div>
             <small style="color:var(--mute)">USD per barrel</small>
             <div style="margin-top:10px;">
               <button class="btn btn-outline" style="font-size:12px; padding:5px 14px;" onclick="fetchLiveCommodity('oil')">Refresh Oil</button>
@@ -657,7 +657,7 @@
           <div class="card">
             <h3>🥇 Gold Spot (XAU/USD)</h3>
             <div style="font-size:12px; color:var(--mute); margin-bottom:8px;">Live feed via TwelveData Spot</div>
-            <div style="font:700 28px Georgia, serif; color:var(--gold-dark);" id="gold-price-display">$4,139.42</div>
+            <div style="font:700 28px Georgia, serif; color:var(--gold-dark);" id="gold-price-display">Connecting...</div>
             <small style="color:var(--mute)">USD/troy oz (≈ ₹1,17,780 / 10g)</small>
             <div style="margin-top:10px;">
               <button class="btn btn-outline" style="font-size:12px; padding:5px 14px;" onclick="fetchLiveCommodity('gold')">Refresh Gold</button>
@@ -667,7 +667,7 @@
           <div class="card">
             <h3>🥈 Silver Spot (XAG/USD)</h3>
             <div style="font-size:12px; color:var(--mute); margin-bottom:8px;">Real-time Spot Ratio Index</div>
-            <div style="font:700 28px Georgia, serif; color:var(--ink-light);" id="silver-price-display">$47.91</div>
+            <div style="font:700 28px Georgia, serif; color:var(--ink-light);" id="silver-price-display">Spot feed unsupported</div>
             <small style="color:var(--mute)">USD/troy oz (≈ ₹1,36,320 / kg)</small>
             <div style="margin-top:10px;">
               <button class="btn btn-outline" style="font-size:12px; padding:5px 14px;" onclick="fetchLiveCommodity('silver')">Refresh Silver</button>
@@ -704,7 +704,7 @@
           <div style="background:#fff; border:1px solid var(--gold-border); border-radius:12px; padding:16px; margin-top:10px;">
             <b>Place Market Paper Order (Alpaca API)</b>
             <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr; margin-top:8px;">
-              <div><label>Symbol<input id="alp-sym" value="AMZN"></label></div>
+              <div><label>Symbol<input id="alp-sym" value="AMZN" onchange="selectTicker(this.value)"></label></div>
               <div><label>Quantity<input id="alp-qty" type="number" value="0" placeholder="e.g. 1"></label></div>
               <div>
                 <label>Side
@@ -740,7 +740,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
         <h3 style="margin:0;">🏢 Company Fundamentals &amp; Real-Time News Radar</h3>
         <div style="display:flex; gap:8px;">
-          <input id="deepdive-symbol" value="AMZN" placeholder="Symbol (e.g. AAPL, AMZN, NVDA)" style="width:120px; text-transform:uppercase; font-weight:700; padding:5px 10px; font-size:12px;">
+          <input id="deepdive-symbol" value="AMZN" onchange="selectTicker(this.value)" placeholder="Symbol (e.g. AAPL, AMZN, NVDA)" style="width:120px; text-transform:uppercase; font-weight:700; padding:5px 10px; font-size:12px;">
           <button class="btn btn-outline" style="margin:0; padding:5px 12px; font-size:12px;" onclick="loadCompanyDeepDive()">Analyze Fundamentals</button>
         </div>
       </div>
@@ -2479,9 +2479,68 @@
   
 
 // ==========================================
-// REAL-TIME CANDLESTICK CHART & OHLCV ENGINE
+// UNIFIED MARKET DATA PIPELINE (SINGLE SOURCE OF TRUTH)
 // ==========================================
+let selectedTicker = 'AMZN';
+let currentTickerRequestId = 0;
 let currentCandles = [];
+
+function selectTicker(sym) {
+  if (!sym) return;
+  sym = sym.toUpperCase().trim();
+  selectedTicker = sym;
+  currentTickerRequestId++;
+  const reqId = currentTickerRequestId;
+
+  // 1. Synchronize all ticker input fields across views
+  if ($('#chart-symbol-input')) $('#chart-symbol-input').value = sym;
+  if ($('#inv-symbol')) $('#inv-symbol').value = sym;
+  if ($('#deepdive-symbol')) $('#deepdive-symbol').value = sym;
+  if ($('#alp-sym')) $('#alp-sym').value = sym;
+
+  // 2. Immediately clear old symbol data and show clean loading state for new symbol
+  if ($('#cbar-symbol')) $('#cbar-symbol').textContent = sym;
+  if ($('#cbar-price')) $('#cbar-price').textContent = 'Fetching...';
+  if ($('#cbar-change')) {
+    $('#cbar-change').textContent = '...';
+    $('#cbar-change').style.color = 'var(--ink-light)';
+  }
+  if ($('#cbar-open')) $('#cbar-open').textContent = '-';
+  if ($('#cbar-high')) $('#cbar-high').textContent = '-';
+  if ($('#cbar-low')) $('#cbar-low').textContent = '-';
+  if ($('#cbar-close')) $('#cbar-close').textContent = '-';
+  if ($('#cbar-vol')) $('#cbar-vol').textContent = '-';
+
+  if ($('#chart-live-indicator')) {
+    $('#chart-live-indicator').textContent = '🔄 Loading ' + sym + '...';
+  }
+  if ($('#fund-company-name')) {
+    $('#fund-company-name').textContent = sym + ' (Fetching fundamentals...)';
+  }
+
+  // Clear candlestick canvas with immediate feedback for new symbol
+  const canvas = document.getElementById('candlestickCanvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Loading verified OHLCV for ' + sym + '...', canvas.width / 2, canvas.height / 2);
+  }
+
+  // 3. Switch WebSocket subscription immediately
+  if (window.telemetrySocket && window.telemetrySocket.readyState === WebSocket.OPEN) {
+    try {
+      window.telemetrySocket.send(JSON.stringify({ action: 'subscribe', symbol: sym }));
+    } catch(e) {}
+  }
+
+  // 4. Fetch synchronized data for the selected ticker
+  loadOhlcvData(sym, reqId);
+  fetchLiveTickerQuote(sym, reqId);
+  loadCompanyDeepDive(sym, reqId);
+}
 
 function renderCandleStickChart(candles) {
   const canvas = document.getElementById('candlestickCanvas');
@@ -2493,13 +2552,12 @@ function renderCandleStickChart(candles) {
 
   if (!candles || candles.length === 0) {
     ctx.fillStyle = '#8b949e';
-    ctx.font = '14px sans-serif';
+    ctx.font = '13px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('No candlestick data returned for this asset/interval.', W / 2, H / 2);
+    ctx.fillText('No candlestick data returned for ' + selectedTicker, W / 2, H / 2);
     return;
   }
 
-  // Candles are typically newest-first or oldest-first. Normalize to oldest-first (left-to-right)
   const sorted = [...candles].reverse();
   currentCandles = sorted;
 
@@ -2538,7 +2596,7 @@ function renderCandleStickChart(candles) {
     ctx.fillText('$' + yVal.toFixed(2), paddingX - 4, yPx + 3);
   }
 
-  // Calculate 7-period SMA
+  // 7-period SMA
   const smaPoints = [];
   const period = 7;
   for (let i = 0; i < n; i++) {
@@ -2552,7 +2610,7 @@ function renderCandleStickChart(candles) {
     }
   }
 
-  // Draw Candlesticks and Volume Bars
+  // Draw Candlesticks & Volume
   sorted.forEach((c, i) => {
     const xCenter = paddingX + i * gap + gap / 2;
     const isUp = c.close >= c.open;
@@ -2563,12 +2621,10 @@ function renderCandleStickChart(candles) {
     const yOpen = 20 + plotH - ((c.open - minP) / rangeP) * plotH;
     const yClose = 20 + plotH - ((c.close - minP) / rangeP) * plotH;
 
-    // Volume bar (at bottom, max 40px)
     const volH = maxVol > 0 ? (c.volume / maxVol) * 35 : 0;
     ctx.fillStyle = isUp ? 'rgba(5, 150, 105, 0.25)' : 'rgba(220, 38, 38, 0.25)';
     ctx.fillRect(xCenter - candleW / 2, H - 10 - volH, candleW, volH);
 
-    // Wick
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -2576,14 +2632,12 @@ function renderCandleStickChart(candles) {
     ctx.lineTo(xCenter, yLow);
     ctx.stroke();
 
-    // Body
     ctx.fillStyle = color;
     const bodyY = Math.min(yOpen, yClose);
     const bodyH = Math.max(2, Math.abs(yClose - yOpen));
     ctx.fillRect(xCenter - candleW / 2, bodyY, candleW, bodyH);
   });
 
-  // Draw SMA line
   if (smaPoints.length > 1) {
     ctx.strokeStyle = '#f59e0b';
     ctx.lineWidth = 2;
@@ -2594,138 +2648,185 @@ function renderCandleStickChart(candles) {
   }
 }
 
-async function loadOhlcvData() {
-  const sym = ($('#chart-symbol-input').value || 'AMZN').toUpperCase().trim();
-  const interval = $('#chart-interval-select').value || '1day';
+async function loadOhlcvData(symParam, reqId) {
+  const sym = (symParam || $('#chart-symbol-input').value || selectedTicker || 'AMZN').toUpperCase().trim();
+  const interval = $('#chart-interval-select') ? $('#chart-interval-select').value : '1day';
   const indicator = $('#chart-live-indicator');
-  indicator.textContent = '🔄 Fetching Candles...';
+  if (indicator) indicator.textContent = '🔄 Fetching Candles...';
 
   try {
-    const res = await api(`market/ohlcv?symbol=${encodeURIComponent(sym)}&interval=${interval}&outputsize=45`);
-    if (res.candles && res.candles.length > 0) {
-      indicator.textContent = '🟢 Live Feed Active (' + res.interval + ')';
+    const res = await api(`market/ohlcv?symbol=${encodeURIComponent(sym)}&interval=${interval}&outputsize=45&mode=live`);
+
+    // Guard: ignore response if ticker changed or request is outdated
+    if (reqId && reqId !== currentTickerRequestId) return;
+    if (sym !== selectedTicker) return;
+
+    if (res.status === 'ok' && res.candles && res.candles.length > 0) {
+      if (indicator) indicator.textContent = `🟢 Live Feed (${res.interval || interval}) · ${res.provider_name || 'TwelveData'}`;
       const latest = res.candles[0];
       const prev = res.candles[1] || latest;
       const chg = latest.close - prev.close;
       const chgPct = prev.close ? (chg / prev.close) * 100 : 0;
 
-      $('#cbar-symbol').textContent = sym;
-      $('#cbar-price').textContent = '$' + latest.close.toFixed(2);
-      $('#cbar-change').textContent = (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%';
-      $('#cbar-change').style.color = chgPct >= 0 ? 'var(--emerald)' : 'var(--danger)';
-      $('#cbar-open').textContent = '$' + latest.open.toFixed(2);
-      $('#cbar-high').textContent = '$' + latest.high.toFixed(2);
-      $('#cbar-low').textContent = '$' + latest.low.toFixed(2);
-      $('#cbar-close').textContent = '$' + latest.close.toFixed(2);
-      $('#cbar-vol').textContent = latest.volume ? latest.volume.toLocaleString() : 'N/A';
+      if ($('#cbar-symbol')) $('#cbar-symbol').textContent = sym;
+      if ($('#cbar-price')) $('#cbar-price').textContent = '$' + latest.close.toFixed(2);
+      if ($('#cbar-change')) {
+        $('#cbar-change').textContent = (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%';
+        $('#cbar-change').style.color = chgPct >= 0 ? 'var(--emerald)' : 'var(--danger)';
+      }
+      if ($('#cbar-open')) $('#cbar-open').textContent = '$' + latest.open.toFixed(2);
+      if ($('#cbar-high')) $('#cbar-high').textContent = '$' + latest.high.toFixed(2);
+      if ($('#cbar-low')) $('#cbar-low').textContent = '$' + latest.low.toFixed(2);
+      if ($('#cbar-close')) $('#cbar-close').textContent = '$' + latest.close.toFixed(2);
+      if ($('#cbar-vol')) $('#cbar-vol').textContent = latest.volume ? latest.volume.toLocaleString() : 'N/A';
 
       renderCandleStickChart(res.candles);
     } else {
-      indicator.textContent = '⚠️ Simulated / Fallback';
-      // Generate synthetic institutional candles if remote rate limit hit
-      const fakeCandles = [];
-      let base = 250.0;
-      for (let i = 0; i < 40; i++) {
-        const o = base;
-        const delta = (Math.random() - 0.48) * 6;
-        const c = o + delta;
-        const h = Math.max(o, c) + Math.random() * 3;
-        const l = Math.min(o, c) - Math.random() * 3;
-        base = c;
-        fakeCandles.push({ datetime: 'T-' + i, open: o, high: h, low: l, close: c, volume: Math.floor(Math.random() * 5000000 + 1000000) });
+      // NEVER fabricate fake candles! Explicit honest unavailable state
+      const reason = res.error || 'No candle data returned from upstream provider.';
+      if (indicator) indicator.textContent = '⚠️ Feed Unavailable';
+      const canvas = document.getElementById('candlestickCanvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '13px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`OHLCV unavailable for ${sym}: ${reason}`, canvas.width / 2, canvas.height / 2 - 10);
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '11px monospace';
+        ctx.fillText('Data Provenance: Verified LIVE mode. Synthetic fallback disabled.', canvas.width / 2, canvas.height / 2 + 15);
       }
-      renderCandleStickChart(fakeCandles);
     }
   } catch (e) {
-    indicator.textContent = '❌ Offline / Fallback';
+    if (indicator) indicator.textContent = '❌ Provider Offline';
   }
 }
 
-// ==========================================
-// GLOBAL MARKET TICKS: SENSEX, NIFTY, FOREX, CRYPTO
-// ==========================================
+async function fetchLiveTickerQuote(symParam, reqId) {
+  const sym = (symParam || selectedTicker).toUpperCase().trim();
+  try {
+    const res = await api(`market/quote?kind=stock&symbol=${encodeURIComponent(sym)}&mode=live`);
+    if (reqId && reqId !== currentTickerRequestId) return;
+    if (sym !== selectedTicker) return;
+
+    if (res.status === 'ok' && res.price !== undefined) {
+      if ($('#cbar-symbol')) $('#cbar-symbol').textContent = sym;
+      if ($('#cbar-price')) $('#cbar-price').textContent = '$' + Number(res.price).toFixed(2);
+      if ($('#cbar-change') && res.change_percent) {
+        $('#cbar-change').textContent = res.change_percent;
+        const isUp = String(res.change_percent).startsWith('+') || Number(res.change) >= 0;
+        $('#cbar-change').style.color = isUp ? 'var(--emerald)' : 'var(--danger)';
+      }
+      if (res.high_today && $('#cbar-high')) $('#cbar-high').textContent = '$' + Number(res.high_today).toFixed(2);
+      if (res.low_today && $('#cbar-low')) $('#cbar-low').textContent = '$' + Number(res.low_today).toFixed(2);
+      if (res.open_today && $('#cbar-open')) $('#cbar-open').textContent = '$' + Number(res.open_today).toFixed(2);
+      if (res.previous_close && $('#cbar-close')) $('#cbar-close').textContent = '$' + Number(res.previous_close).toFixed(2);
+    } else {
+      if ($('#cbar-price')) $('#cbar-price').textContent = 'Quote Unavailable';
+      if ($('#cbar-change')) $('#cbar-change').textContent = res.error || 'No live feed';
+    }
+  } catch (e) {}
+}
+
 async function fetchGlobalTicks() {
   try {
-    // SENSEX & NIFTY
-    const sx = await api('market/india?index=sensex');
-    if (sx.price) $('#sensex-price').textContent = sx.price.toLocaleString('en-IN');
+    const sx = await api('market/india?index=sensex&mode=live');
+    if ($('#sensex-price')) $('#sensex-price').textContent = sx.status === 'ok' && sx.price ? sx.price.toLocaleString('en-IN') : 'Unavailable (Requires BSE License)';
 
-    const nf = await api('market/india?index=nifty');
-    if (nf.price) $('#nifty-price').textContent = nf.price.toLocaleString('en-IN');
+    const nf = await api('market/india?index=nifty&mode=live');
+    if ($('#nifty-price')) $('#nifty-price').textContent = nf.status === 'ok' && nf.price ? nf.price.toLocaleString('en-IN') : 'Unavailable (Requires NSE License)';
 
-    // FOREX USD/INR
-    const fx = await api('market/forex?from=USD&to=INR');
-    if (fx.rate) $('#forex-usd-inr').textContent = '₹' + fx.rate.toFixed(2);
+    const fx = await api('market/forex?from=USD&to=INR&mode=live');
+    if ($('#forex-usd-inr')) $('#forex-usd-inr').textContent = fx.status === 'ok' && fx.rate ? '₹' + fx.rate.toFixed(2) : 'Unavailable';
 
-    // BITCOIN & ETHEREUM
-    const btc = await api('market/crypto?symbol=BTC');
-    if (btc.price) $('#btc-price').textContent = '$' + btc.price.toLocaleString();
+    const btc = await api('market/crypto?symbol=BTC&mode=live');
+    if ($('#btc-price')) $('#btc-price').textContent = btc.status === 'ok' && btc.price ? '$' + btc.price.toLocaleString() : 'Unavailable';
 
-    const eth = await api('market/crypto?symbol=ETH');
-    if (eth.price) $('#eth-price').textContent = '$' + eth.price.toLocaleString();
+    const eth = await api('market/crypto?symbol=ETH&mode=live');
+    if ($('#eth-price')) $('#eth-price').textContent = eth.status === 'ok' && eth.price ? '$' + eth.price.toLocaleString() : 'Unavailable';
 
-    // NATURAL GAS
-    const ng = await api('market/naturalgas');
-    if (ng.price) $('#natgas-price').textContent = '$' + ng.price.toFixed(3);
+    const ng = await api('market/naturalgas&mode=live');
+    if ($('#natgas-price')) $('#natgas-price').textContent = ng.status === 'ok' && ng.price ? '$' + ng.price.toFixed(3) : 'Unavailable';
 
-    // Update Top Ticker Bar Marquee
-    const ticker = $('#marquee-text');
-    if (ticker) {
-      ticker.innerHTML = `
-        ⚡ <b>LIVE MARKETS</b>: SENSEX: ₹${$('#sensex-price').textContent} ·
-        NIFTY 50: ₹${$('#nifty-price').textContent} ·
-        USD/INR: ${$('#forex-usd-inr').textContent} ·
-        GOLD (XAU/USD): ${$('#gold-price-display').textContent} ·
-        BRENT CRUDE: ${$('#oil-price-display').textContent} ·
-        NAT GAS: ${$('#natgas-price').textContent} ·
-        BITCOIN (BTC): ${$('#btc-price').textContent} ·
-        ETHEREUM (ETH): ${$('#eth-price').textContent} ·
-        AMZN: ${$('#cbar-price').textContent} ·
-        Deterministic SEBI &amp; SEC Transparency Guaranteed · No Fabricated Numbers
-      `;
+    const ov = await api('market/overview?mode=live');
+    if (ov.market_overview) {
+      updateTickerMarquee(ov.market_overview);
     }
   } catch (e) {
     console.error('Tick error', e);
   }
 }
 
-// ==========================================
-// COMPANY DEEP DIVE (FUNDAMENTALS & NEWS)
-// ==========================================
-async function loadCompanyDeepDive() {
-  const sym = ($('#deepdive-symbol').value || 'AMZN').toUpperCase().trim();
-  $('#fund-company-name').textContent = sym + ' Analyzing...';
+function updateTickerMarquee(overview) {
+  const ticker = $('#marquee-text');
+  if (!ticker || !overview) return;
+  const parts = [];
+  if (overview.GOLD && overview.GOLD.price) parts.push(`GOLD: $${overview.GOLD.price}`);
+  if (overview.BRENT && overview.BRENT.price) parts.push(`BRENT: $${overview.BRENT.price}`);
+  if (overview.BTC && overview.BTC.price) parts.push(`BTC: $${Number(overview.BTC.price).toLocaleString()}`);
+  if (overview['USD/INR'] && overview['USD/INR'].rate) parts.push(`USD/INR: ₹${overview['USD/INR'].rate}`);
+  for (const sym of ['AMZN', 'NVDA', 'AAPL', 'GOOGL']) {
+    if (overview[sym] && overview[sym].price) {
+      parts.push(`${sym}: $${overview[sym].price} (${overview[sym].change_pct || '0%'})`);
+    }
+  }
+  if (parts.length > 0) {
+    ticker.innerHTML = `⚡ <b>VERIFIED MARKET TICKS</b>: ${parts.join(' · ')} · Provenance-Verified · Strict LIVE Mode Active`;
+  }
+}
+
+async function loadCompanyDeepDive(symParam, reqId) {
+  const sym = (symParam || $('#deepdive-symbol').value || selectedTicker || 'AMZN').toUpperCase().trim();
+  if ($('#fund-company-name')) $('#fund-company-name').textContent = sym + ' Analyzing...';
 
   try {
-    // Profile
-    const prof = await api(`market/profile?symbol=${sym}`);
+    const prof = await api(`market/profile?symbol=${encodeURIComponent(sym)}&mode=live`);
+    if (reqId && reqId !== currentTickerRequestId) return;
+    if (sym !== selectedTicker) return;
+
     if (prof.status === 'ok') {
-      $('#fund-company-name').textContent = `${prof.name || sym} (${sym})`;
-      $('#fund-industry').textContent = prof.industry || 'Technology';
-      $('#fund-exchange').textContent = prof.exchange || 'US Exchange';
-      if (prof.market_cap_usd) {
-        $('#fund-mcap').textContent = '$' + (prof.market_cap_usd / 1000).toFixed(2) + ' B';
+      if ($('#fund-company-name')) $('#fund-company-name').textContent = `${prof.name || sym} (${sym})`;
+      if ($('#fund-industry')) $('#fund-industry').textContent = prof.industry || 'N/A';
+      if ($('#fund-exchange')) $('#fund-exchange').textContent = prof.exchange || 'US Exchange';
+      if ($('#fund-mcap')) {
+        $('#fund-mcap').textContent = prof.market_cap_usd ? '$' + (prof.market_cap_usd / 1000).toFixed(2) + ' B' : 'N/A';
       }
+    } else {
+      if ($('#fund-company-name')) $('#fund-company-name').textContent = `${sym} (Profile Unavailable)`;
+      if ($('#fund-industry')) $('#fund-industry').textContent = 'Not provided';
+      if ($('#fund-exchange')) $('#fund-exchange').textContent = 'Not provided';
+      if ($('#fund-mcap')) $('#fund-mcap').textContent = 'N/A';
     }
 
-    // Metrics
-    const met = await api(`market/metrics?symbol=${sym}`);
+    const met = await api(`market/metrics?symbol=${encodeURIComponent(sym)}&mode=live`);
+    if (reqId && reqId !== currentTickerRequestId) return;
+    if (sym !== selectedTicker) return;
+
     if (met.status === 'ok') {
-      if (met.pe_ratio) $('#fund-pe').textContent = met.pe_ratio.toFixed(1) + 'x';
-      if (met.eps_ttm) $('#fund-eps').textContent = '$' + met.eps_ttm.toFixed(2);
-      if (met.roe) $('#fund-roe').textContent = (met.roe * 100).toFixed(1) + '%';
-      if (met['52w_high']) $('#fund-52h').textContent = '$' + met['52w_high'].toFixed(2);
-      if (met['52w_low']) $('#fund-52l').textContent = '$' + met['52w_low'].toFixed(2);
+      if ($('#fund-pe')) $('#fund-pe').textContent = met.pe_ratio ? met.pe_ratio.toFixed(1) + 'x' : 'N/A';
+      if ($('#fund-eps')) $('#fund-eps').textContent = met.eps_ttm ? '$' + met.eps_ttm.toFixed(2) : 'N/A';
+      if ($('#fund-roe')) $('#fund-roe').textContent = met.roe ? (met.roe * 100).toFixed(1) + '%' : 'N/A';
+      if ($('#fund-52h')) $('#fund-52h').textContent = met['52w_high'] ? '$' + met['52w_high'].toFixed(2) : 'N/A';
+      if ($('#fund-52l')) $('#fund-52l').textContent = met['52w_low'] ? '$' + met['52w_low'].toFixed(2) : 'N/A';
+    } else {
+      if ($('#fund-pe')) $('#fund-pe').textContent = 'N/A';
+      if ($('#fund-eps')) $('#fund-eps').textContent = 'N/A';
+      if ($('#fund-roe')) $('#fund-roe').textContent = 'N/A';
+      if ($('#fund-52h')) $('#fund-52h').textContent = 'N/A';
+      if ($('#fund-52l')) $('#fund-52l').textContent = 'N/A';
     }
 
-    // News
-    const newsRes = await api(`market/news?symbol=${sym}&count=4`);
+    const newsRes = await api(`market/news?symbol=${encodeURIComponent(sym)}&count=4&mode=live`);
+    if (reqId && reqId !== currentTickerRequestId) return;
+    if (sym !== selectedTicker) return;
+
     const nc = $('#company-news-container');
-    if (newsRes.news && newsRes.news.length > 0) {
+    if (newsRes.status === 'ok' && newsRes.news && newsRes.news.length > 0) {
       nc.innerHTML = newsRes.news.map(n => `
         <div style="padding:8px; border-bottom:1px solid #e5e7eb; font-size:12.5px;">
           <div style="font-weight:600; color:var(--ink);">
-            <a href="${esc(n.url)}" target="_blank" style="color:var(--ink); text-decoration:none;">${esc(n.headline)}</a>
+            <a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--ink); text-decoration:none;">${esc(n.headline)}</a>
           </div>
           <div style="display:flex; justify-content:space-between; margin-top:4px; color:var(--mute); font-size:11px;">
             <span>${esc(n.source)} · ${esc(n.datetime)}</span>
@@ -2736,30 +2837,28 @@ async function loadCompanyDeepDive() {
         </div>
       `).join('');
     } else {
-      nc.innerHTML = '<div style="font-size:12px; color:var(--mute); padding:10px;">No recent wire headlines found for ' + sym + '.</div>';
+      nc.innerHTML = `<div style="font-size:12px; color:var(--mute); padding:10px;">No verified news headlines found for ${sym}.</div>`;
     }
   } catch (e) {
-    $('#fund-company-name').textContent = sym + ' Fundamentals';
+    if ($('#fund-company-name')) $('#fund-company-name').textContent = sym + ' Fundamentals';
   }
 }
 
-// ==========================================
-// WATCHLIST & ALERTS MANAGEMENT
-// ==========================================
-let trackedWatchlist = ['AMZN', 'NVDA', 'TSLA', 'AAPL', 'MSFT'];
+// Watchlist
+let trackedWatchlist = ['AMZN', 'NVDA', 'TSLA', 'AAPL', 'GOOGL'];
 
 async function loadWatchlist() {
   const container = $('#watchlist-table-container');
   if (!container) return;
 
   try {
-    const res = await api('market/watchlist-prices', { symbols: trackedWatchlist });
+    const res = await api('market/watchlist-prices', { symbols: trackedWatchlist, mode: 'live' });
     if (res.prices) {
-      $('#watchlist-count-badge').textContent = res.prices.length + ' Assets Tracked';
+      if ($('#watchlist-count-badge')) $('#watchlist-count-badge').textContent = res.prices.length + ' Assets Tracked';
       let rows = res.prices.map(p => `
         <tr>
-          <td><b>${esc(p.symbol)}</b></td>
-          <td><b>$${p.price ? p.price.toFixed(2) : '-'}</b></td>
+          <td><b style="cursor:pointer; color:var(--emerald);" onclick="selectTicker('${esc(p.symbol)}')">${esc(p.symbol)}</b></td>
+          <td><b>${p.price !== undefined && p.price !== null ? '$' + p.price.toFixed(2) : '<span style="color:var(--mute); font-size:11px;">' + (p.error || 'Unavailable') + '</span>'}</b></td>
           <td style="color:${p.change >= 0 ? 'var(--emerald)' : 'var(--danger)'}; font-weight:600;">
             ${p.change_percent || '-'}
           </td>
@@ -2769,7 +2868,7 @@ async function loadWatchlist() {
       container.innerHTML = `<table><thead><tr><th>Asset</th><th>Price</th><th>Change</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
   } catch (e) {
-    container.innerHTML = '<div style="color:var(--mute); font-size:12px; padding:10px;">Sign in or refresh to view watchlist.</div>';
+    container.innerHTML = '<div style="color:var(--mute); font-size:12px; padding:10px;">Watchlist load error.</div>';
   }
 }
 
@@ -2790,7 +2889,7 @@ function removeWatchlistSymbol(sym) {
 
 let activeAlerts = [
   { id: 1, symbol: 'AMZN', condition: 'above', threshold: 270.0, active: true },
-  { id: 2, symbol: 'BTC', condition: 'above', threshold: 100000.0, active: true }
+  { id: 2, symbol: 'GOOGL', condition: 'above', threshold: 350.0, active: true }
 ];
 
 function loadAlerts() {
@@ -2831,47 +2930,136 @@ function deletePriceAlert(id) {
   loadAlerts();
 }
 
-// ==========================================
-// REAL-TIME WEBSOCKET TELEMETRY
-// ==========================================
+// Alpaca Order Submission with Client Pre-Validation & Idempotency
+async function submitAlpacaOrder() {
+  const sym = ($('#alp-sym').value || selectedTicker || 'AMZN').toUpperCase().trim();
+  const qty = parseInt($('#alp-qty').value, 10);
+  const side = ($('#alp-side').value || 'buy').toLowerCase();
+  const out = $('#alpaca-order-status');
+
+  if (isNaN(qty) || qty <= 0) {
+    out.style.color = 'var(--danger)';
+    out.textContent = 'Validation Error: Quantity must be a strictly positive integer (> 0).';
+    return;
+  }
+
+  out.style.color = 'var(--ink)';
+  out.textContent = `Submitting paper ${side.toUpperCase()} order for ${qty} shares of ${sym}...`;
+
+  const clientOrderId = 'oracle_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+
+  try {
+    const res = await api('market/alpaca/order', {
+      symbol: sym,
+      qty: qty,
+      side: side,
+      order_type: 'market',
+      time_in_force: 'day',
+      client_order_id: clientOrderId
+    });
+
+    if (res.status === 'ok') {
+      out.style.color = 'var(--emerald)';
+      out.textContent = `Order ${String(res.order_status).toUpperCase()}!
+Order ID: ${res.order_id}
+Symbol: ${res.symbol} | Qty: ${res.qty} | Side: ${res.side.toUpperCase()}
+Submitted at: ${res.submitted_at}
+Client Order ID: ${res.client_order_id}`;
+      loadAlpacaData();
+    } else {
+      out.style.color = 'var(--danger)';
+      out.textContent = `Order Submission Failed: ${res.error || 'Provider rejected submission.'}
+Status: ${res.order_status || 'rejected'}`;
+    }
+  } catch (e) {
+    out.style.color = 'var(--danger)';
+    out.textContent = 'Submission Failed: ' + e.message;
+  }
+}
+
+// WebSocket Telemetry with Bidirectional Subscription
 function initTelemetryWs() {
   try {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${proto}//${location.host}/ws/telemetry`;
     const ws = new WebSocket(wsUrl);
+    window.telemetrySocket = ws;
 
     ws.onopen = () => {
       console.log('ORACLE Live Telemetry Streaming WebSocket connected');
       const wsTag = $('#oracle-status-tag');
       if (wsTag) wsTag.textContent = '🟢 WebSocket Streaming';
+      if (selectedTicker) {
+        ws.send(JSON.stringify({ action: 'subscribe', symbol: selectedTicker }));
+      }
     };
 
     ws.onmessage = (evt) => {
       try {
         const msg = JSON.parse(evt.data);
-        if (msg.type === 'market_tick' && msg.data) {
-          fetchGlobalTicks();
+        if (msg.type === 'market_tick') {
+          updateTickerMarquee(msg.data);
+        } else if (msg.type === 'symbol_quote') {
+          if (msg.requested_symbol && msg.requested_symbol === selectedTicker && msg.data) {
+            applyLiveSymbolQuote(msg.data);
+          }
         }
       } catch (err) {}
     };
 
     ws.onclose = () => {
-      setTimeout(initTelemetryWs, 10000); // Reconnect after 10s
+      setTimeout(initTelemetryWs, 8000);
     };
   } catch (e) {
-    console.log('WebSocket optional fallback to interval polling');
+    console.log('WebSocket fallback');
   }
 }
 
-// Initial Bootstrapping for new real-time components
-loadOhlcvData();
+function applyLiveSymbolQuote(q) {
+  if (!q || q.requested_symbol !== selectedTicker) return;
+  if (q.status === 'ok' && q.price !== undefined) {
+    if ($('#cbar-symbol')) $('#cbar-symbol').textContent = q.symbol || selectedTicker;
+    if ($('#cbar-price')) $('#cbar-price').textContent = '$' + Number(q.price).toFixed(2);
+    if ($('#cbar-change') && q.change_percent) {
+      $('#cbar-change').textContent = q.change_percent;
+      const isUp = String(q.change_percent).startsWith('+');
+      $('#cbar-change').style.color = isUp ? 'var(--emerald)' : 'var(--danger)';
+    }
+  }
+}
+
+async function renderIpoPipeline() {
+  try {
+    const res = await api('market/ipos?mode=live');
+    const table = $('#ipo-pipeline-table');
+    if (!table) return;
+    if (res.status === 'ok' && res.ipos && res.ipos.length > 0) {
+      let rows = '';
+      for (const ipo of res.ipos) {
+        rows += `<tr><td><b>${esc(ipo.company)}</b><br><small style="color:var(--mute)">${esc(ipo.exchange)}</small></td><td>${esc(ipo.issue_size)}</td><td><span class="tag calculated">${esc(ipo.status)}</span></td></tr>`;
+      }
+      table.innerHTML = `<table><thead><tr><th>Company</th><th>Size</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } else {
+      table.innerHTML = `<div style="padding:14px; text-align:center; color:var(--mute); font-size:12.5px;">${esc(res.error || 'Live IPO feed requires a licensed exchange/regulatory filing subscription. Provider not configured.')}</div>`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Initial Bootstrapping
+selectTicker('AMZN');
 fetchGlobalTicks();
-loadCompanyDeepDive();
 loadWatchlist();
 loadAlerts();
+loadAlpacaData();
+renderIpoPipeline();
+fetchLiveCommodity('oil');
+fetchLiveCommodity('gold');
+fetchLiveCommodity('silver');
 initTelemetryWs();
+loadData();
 
-// Recurring 10-second ticker update
 setInterval(fetchGlobalTicks, 10000);
 
 </script>

@@ -47,5 +47,6 @@ class T(unittest.TestCase):
         d = json.load(urllib.request.urlopen(u + "/api/demo")); self.assertIn("SYNTHETIC", d["label"])
         r = urllib.request.Request(u + "/api/calc/sip", json.dumps({"monthly": 5000, "annual_pct": 12, "years": 10}).encode(), {"Content-Type": "application/json"})
         self.assertAlmostEqual(json.load(urllib.request.urlopen(r))["value"], 1161695.38, delta=2)
-        self.assertIn(b"ORACLE", urllib.request.urlopen(u + "/").read()); s.shutdown()
+        with urllib.request.urlopen(u + "/") as resp: self.assertIn(b"ORACLE", resp.read());
+        s.shutdown()
 if __name__ == "__main__": unittest.main()
