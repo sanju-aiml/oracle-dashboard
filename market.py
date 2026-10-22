@@ -26,6 +26,7 @@ FINNHUB_KEY = os.environ.get("FINNHUB_KEY", "").strip()
 TWELVEDATA_KEY = os.environ.get("TWELVEDATA_KEY", "").strip()
 OILPRICE_KEY = os.environ.get("OILPRICE_KEY", "").strip()
 ALPHAVANTAGE_KEY = os.environ.get("ALPHAVANTAGE_KEY", "").strip()
+BINANCE_API_KEY = os.environ.get("BINANCE_API_KEY", "").strip()
 
 ALPACA_KEY_ID = os.environ.get("ALPACA_KEY_ID", "").strip()
 ALPACA_SECRET_KEY = os.environ.get("ALPACA_SECRET_KEY", "").strip()
@@ -42,7 +43,7 @@ def redact_secrets(text: str) -> str:
     if not text:
         return ""
     s = str(text)
-    for key in (FINNHUB_KEY, TWELVEDATA_KEY, OILPRICE_KEY, ALPHAVANTAGE_KEY, ALPACA_KEY_ID, ALPACA_SECRET_KEY):
+    for key in (FINNHUB_KEY, TWELVEDATA_KEY, OILPRICE_KEY, ALPHAVANTAGE_KEY, BINANCE_API_KEY, ALPACA_KEY_ID, ALPACA_SECRET_KEY):
         if key and len(key) >= 6:
             s = s.replace(key, "[REDACTED]")
     s = re.sub(r'(apikey|token|token=)[^&\s]+', r'\1=[REDACTED]', s)
@@ -66,6 +67,16 @@ _PROVIDER_HEALTH = {
         "provider": "TwelveData Global Realtime",
         "configured": bool(TWELVEDATA_KEY),
         "status": "ready" if TWELVEDATA_KEY else "not_configured",
+        "last_success_ts": None,
+        "last_error": None,
+        "last_error_ts": None,
+        "success_count": 0,
+        "error_count": 0
+    },
+    "binance": {
+        "provider": "Binance Live Market Data",
+        "configured": bool(BINANCE_API_KEY),
+        "status": "ready" if BINANCE_API_KEY else "not_configured",
         "last_success_ts": None,
         "last_error": None,
         "last_error_ts": None,
@@ -262,6 +273,12 @@ def get_live_stock(symbol="AMZN", mode="live") -> Dict[str, Any]:
     if cached:
         return cached
 
+    # Crypto ticker routing to Binance/crypto feed
+    crypto_symbols = {"BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "DOT", "MATIC", "LINK"}
+    clean_sym = sym.replace("/", "").replace("-", "").replace("USD", "").replace("USDT", "")
+    if clean_sym in crypto_symbols or "USDT" in sym or (sym.startswith("BTC") and len(sym) <= 7):
+        return get_crypto_price(sym, mode=mode)
+
     # 1. Primary: Finnhub
     if FINNHUB_KEY:
         url = f"https://finnhub.io/api/v1/quote?symbol={urllib.parse.quote(sym)}&token={FINNHUB_KEY}"
@@ -440,6 +457,53 @@ def get_ohlcv(symbol="AMZN", interval="1day", outputsize=45, mode="live") -> Dic
             status="ok",
             extra={"symbol": sym, "interval": interval, "candles": [], "note": "DEMO MODE: Synthetic placeholder."}
         )
+
+    # Crypto detection: e.g. BTC, ETH, SOL, BTC/USD, BTCUSDT
+    crypto_symbols = {"BTC", "ETH", "SOL", "BNB", "XRP", "DOGE", "ADA", "AVAX", "DOT", "MATIC", "LINK"}
+    clean_sym = sym.replace("/", "").replace("-", "").replace("USD", "").replace("USDT", "")
+    is_crypto = clean_sym in crypto_symbols or "USDT" in sym or "/USD" in sym
+
+    if is_crypto and BINANCE_API_KEY:
+        binance_pair = f"{clean_sym}USDT"
+        interval_map = {"1day": "1d", "1d": "1d", "1week": "1w", "1w": "1w", "1month": "1M", "1h": "1h", "1hour": "1h", "15m": "15m", "5m": "5m"}
+        b_interval = interval_map.get(interval.lower(), "1d")
+        url = f"https://api.binance.com/api/v3/klines?symbol={binance_pair}&interval={b_interval}&limit={outputsize}"
+        headers = {"X-MBX-APIKEY": BINANCE_API_KEY}
+        res = _http_request(url, timeout=5, retries=1, headers=headers, provider_name="binance")
+        if res["ok"] and isinstance(res["data"], list) and len(res["data"]) > 0:
+            candles = []
+            for k in res["data"]:
+                import datetime
+                dt = datetime.datetime.fromtimestamp(k[0]/1000, tz=datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
+                candles.append({
+                    "datetime": dt,
+                    "open": float(k[1]),
+                    "high": float(k[2]),
+                    "low": float(k[3]),
+                    "close": float(k[4]),
+                    "volume": int(float(k[5]))
+                })
+            contract = make_data_contract(
+                requested_symbol=sym,
+                provider_symbol=binance_pair,
+                provider_name="Binance Klines (Real-time)",
+                data_timestamp=candles[-1]["datetime"] if candles else time.strftime("%Y-%m-%d"),
+                feed_status="live",
+                kind="actual",
+                market_status="open",
+                status="ok",
+                extra={
+                    "symbol": sym,
+                    "interval": interval,
+                    "exchange": "BINANCE",
+                    "currency": "USDT",
+                    "candles": candles,
+                    "candle_count": len(candles),
+                    "source": "Binance Klines (Real-time)"
+                }
+            )
+            _set_cache(cache_key, contract, ttl=15)
+            return contract
 
     if TWELVEDATA_KEY:
         url = f"https://api.twelvedata.com/time_series?symbol={urllib.parse.quote(sym)}&interval={interval}&outputsize={outputsize}&apikey={TWELVEDATA_KEY}"
@@ -752,6 +816,44 @@ def get_crypto_price(symbol="BTC", mode="live") -> Dict[str, Any]:
     cached = _get_cache(cache_key)
     if cached:
         return cached
+
+    clean_sym = sym.replace("/", "").replace("-", "").replace("USD", "").replace("USDT", "")
+    binance_pair = f"{clean_sym}USDT"
+
+    # 1. Primary: Binance Live Market Data
+    if BINANCE_API_KEY:
+        url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={binance_pair}"
+        headers = {"X-MBX-APIKEY": BINANCE_API_KEY}
+        res = _http_request(url, timeout=4, retries=1, headers=headers, provider_name="binance")
+        if res["ok"] and "lastPrice" in res["data"]:
+            d = res["data"]
+            cur = float(d["lastPrice"])
+            pct = float(d.get("priceChangePercent", 0.0))
+            contract = make_data_contract(
+                requested_symbol=sym,
+                provider_symbol=binance_pair,
+                provider_name="Binance Live Market Data",
+                data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                feed_status="live",
+                kind="actual",
+                market_status="open",
+                status="ok",
+                extra={
+                    "symbol": sym,
+                    "pair": f"{clean_sym}/USDT",
+                    "price": round(cur, 2 if cur >= 1 else 6),
+                    "change": round(float(d.get("priceChange", 0.0)), 2),
+                    "change_percent": f"{pct:+.2f}%",
+                    "high_today": round(float(d.get("highPrice", cur)), 2),
+                    "low_today": round(float(d.get("lowPrice", cur)), 2),
+                    "volume_24h": round(float(d.get("volume", 0.0)), 2),
+                    "currency": "USDT",
+                    "source": "Binance Live Market Data",
+                    "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
+                }
+            )
+            _set_cache(cache_key, contract, ttl=10)
+            return contract
 
     pair = f"{sym}/USD"
     if TWELVEDATA_KEY:

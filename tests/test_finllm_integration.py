@@ -117,3 +117,23 @@ def test_7_core_chat_integrated_finllm_ca():
     # Chat should handle Amazon investment
     amzn_reply = core.chat("Amazon lo invest cheyocha?", None)
     assert "AMZN" in amzn_reply or "Amazon" in amzn_reply
+
+def test_8_binance_live_crypto_and_candles():
+    import market
+    # Verify Binance live crypto quote
+    btc = market.get_crypto_price("BTC")
+    assert btc["status"] == "ok"
+    assert btc["kind"] == "actual"
+    assert btc["price"] > 10000.0
+    assert "Binance" in btc["provider_name"]
+
+    # Verify Binance live OHLCV klines
+    ohlcv = market.get_ohlcv("BTC", outputsize=15)
+    assert ohlcv["status"] == "ok"
+    assert ohlcv["kind"] == "actual"
+    assert len(ohlcv["candles"]) > 0
+    assert "Binance" in ohlcv["provider_name"]
+    latest = ohlcv["candles"][-1]
+    assert latest["open"] > 0
+    assert latest["close"] > 0
+    assert latest["high"] >= latest["low"]
