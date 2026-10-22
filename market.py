@@ -524,61 +524,131 @@ def get_ohlcv(symbol="AMZN", interval="1day", outputsize=45, mode="live") -> Dic
         res = _http_request(url, timeout=5, retries=1, provider_name="twelvedata")
         if res["ok"]:
             d = res["data"]
-            if d.get("status") == "error":
-                return make_data_contract(
-                    requested_symbol=sym,
-                    provider_symbol="",
-                    provider_name="TwelveData Time Series",
-                    data_timestamp="",
-                    feed_status="unavailable",
-                    kind="actual",
-                    status="error",
-                    extra={"error": d.get("message", "TwelveData error"), "candles": [], "interval": interval}
-                )
-            values = d.get("values", [])
-            if isinstance(values, list) and len(values) > 0:
-                candles = []
-                for v in values:
-                    candles.append({
-                        "datetime": v.get("datetime"),
-                        "open": float(v.get("open", 0)),
-                        "high": float(v.get("high", 0)),
-                        "low": float(v.get("low", 0)),
-                        "close": float(v.get("close", 0)),
-                        "volume": int(float(v.get("volume", 0) or 0))
-                    })
-                meta = d.get("meta", {})
-                contract = make_data_contract(
-                    requested_symbol=sym,
-                    provider_symbol=meta.get("symbol", sym),
-                    provider_name="TwelveData Historical OHLCV",
-                    data_timestamp=candles[0]["datetime"] if candles else time.strftime("%Y-%m-%d"),
-                    feed_status="historical",
-                    kind="actual",
-                    market_status="closed" if interval in ("1day", "1week") else "open",
-                    status="ok",
-                    extra={
-                        "symbol": sym,
-                        "interval": interval,
-                        "exchange": meta.get("exchange", ""),
-                        "currency": meta.get("currency", "USD"),
-                        "candles": candles,
-                        "candle_count": len(candles),
-                        "source": "TwelveData Historical OHLCV"
-                    }
-                )
-                _set_cache(cache_key, contract, ttl=60)
-                return contract
+            if d.get("status") != "error":
+                values = d.get("values", [])
+                if isinstance(values, list) and len(values) > 0:
+                    candles = []
+                    for v in values:
+                        candles.append({
+                            "datetime": v.get("datetime"),
+                            "open": float(v.get("open", 0)),
+                            "high": float(v.get("high", 0)),
+                            "low": float(v.get("low", 0)),
+                            "close": float(v.get("close", 0)),
+                            "volume": int(float(v.get("volume", 0) or 0))
+                        })
+                    meta = d.get("meta", {})
+                    contract = make_data_contract(
+                        requested_symbol=sym,
+                        provider_symbol=meta.get("symbol", sym),
+                        provider_name="TwelveData Historical OHLCV",
+                        data_timestamp=candles[0]["datetime"] if candles else time.strftime("%Y-%m-%d"),
+                        feed_status="historical",
+                        kind="actual",
+                        market_status="closed" if interval in ("1day", "1week") else "open",
+                        status="ok",
+                        extra={
+                            "symbol": sym,
+                            "interval": interval,
+                            "exchange": meta.get("exchange", ""),
+                            "currency": meta.get("currency", "USD"),
+                            "candles": candles,
+                            "candle_count": len(candles),
+                            "source": "TwelveData Historical OHLCV"
+                        }
+                    )
+                    _set_cache(cache_key, contract, ttl=60)
+                    return contract
+        elif res.get("status_code") != 429:
+            # Explicit upstream error (e.g. 500 server error, timeout) in live mode
+            return make_data_contract(
+                requested_symbol=sym,
+                provider_symbol="",
+                provider_name="TwelveData",
+                data_timestamp="",
+                feed_status="unavailable",
+                kind="actual",
+                status="error",
+                extra={"error": res.get("error", f"Upstream error for '{sym}'"), "candles": [], "interval": interval}
+            )
+        # TwelveData rate-limited (429) or tier restriction — fall through to yfinance
+
+    # Fallback: yfinance historical OHLCV (free, no rate limits, covers all major equities)
+    try:
+        import yfinance as yf
+        import datetime as _dt
+        # Map interval strings
+        _iv_map = {
+            "1day": "1d", "1d": "1d",
+            "1week": "1wk", "1w": "1wk", "1week": "1wk",
+            "1month": "1mo", "1m": "1mo",
+            "1h": "1h", "1hour": "1h",
+            "15m": "15m", "5m": "5m", "30m": "30m",
+        }
+        yf_interval = _iv_map.get(interval.lower(), "1d")
+        # Pick period that gives requested outputsize candles
+        if yf_interval in ("1d",):
+            period = "1y" if outputsize > 60 else "3mo"
+        elif yf_interval in ("1wk",):
+            period = "2y"
+        elif yf_interval in ("1mo",):
+            period = "5y"
+        else:
+            period = "5d"
+
+        ticker_obj = yf.Ticker(sym)
+        hist = ticker_obj.history(period=period, interval=yf_interval)
+        hist = hist.dropna(subset=["Close"])
+        if len(hist) > 0:
+            # Trim to requested outputsize (most recent first to match TwelveData order)
+            hist = hist.tail(outputsize)
+            candles = []
+            for dt_idx, row in hist.iterrows():
+                dt_str = dt_idx.strftime("%Y-%m-%d %H:%M") if yf_interval not in ("1d","1wk","1mo") else dt_idx.strftime("%Y-%m-%d")
+                candles.append({
+                    "datetime": dt_str,
+                    "open": round(float(row["Open"]), 4),
+                    "high": round(float(row["High"]), 4),
+                    "low": round(float(row["Low"]), 4),
+                    "close": round(float(row["Close"]), 4),
+                    "volume": int(row["Volume"]) if row["Volume"] == row["Volume"] else 0
+                })
+            # Reverse so newest is first (matching TwelveData convention)
+            candles = list(reversed(candles))
+            contract = make_data_contract(
+                requested_symbol=sym,
+                provider_symbol=sym,
+                provider_name="Yahoo Finance Historical OHLCV",
+                data_timestamp=candles[0]["datetime"] if candles else time.strftime("%Y-%m-%d"),
+                feed_status="historical",
+                kind="actual",
+                market_status="closed",
+                status="ok",
+                extra={
+                    "symbol": sym,
+                    "interval": interval,
+                    "exchange": "US Markets",
+                    "currency": "USD",
+                    "candles": candles,
+                    "candle_count": len(candles),
+                    "source": "Yahoo Finance (yfinance)",
+                    "note": "15-min delayed historical data via Yahoo Finance."
+                }
+            )
+            _set_cache(cache_key, contract, ttl=120)
+            return contract
+    except Exception:
+        pass
 
     return make_data_contract(
         requested_symbol=sym,
         provider_symbol="",
-        provider_name="TwelveData",
+        provider_name="TwelveData / Yahoo Finance",
         data_timestamp="",
-        feed_status="unavailable" if TWELVEDATA_KEY else "not_configured",
+        feed_status="unavailable",
         kind="actual",
         status="error",
-        extra={"error": f"Candle data unavailable for '{sym}' from configured provider.", "candles": [], "interval": interval}
+        extra={"error": f"Candle data unavailable for '{sym}'. TwelveData rate-limited; Yahoo Finance fallback failed.", "candles": [], "interval": interval}
     )
 
 # -------------------------------------------------------------
@@ -1290,43 +1360,93 @@ def get_stock_metrics(symbol="AAPL", mode="live") -> Dict[str, Any]:
     if cached:
         return cached
 
+    eps_val = None
+    roe_val = None
+    pe_val = None
+    high_52 = None
+    low_52 = None
+    beta_val = None
+    div_yield = None
+    bv_share = None
+    de_ratio = None
+    rev_ttm = None
+
     if FINNHUB_KEY:
         url = f"https://finnhub.io/api/v1/stock/metric?symbol={urllib.parse.quote(sym)}&metric=all&token={FINNHUB_KEY}"
         res = _http_request(url, timeout=4, retries=1, provider_name="finnhub")
-        if res["ok"]:
-            m = res["data"].get("metric", {})
-            if m:
-                contract = make_data_contract(
-                    requested_symbol=sym,
-                    provider_symbol=sym,
-                    provider_name="Finnhub Financial Metrics",
-                    data_timestamp=time.strftime("%Y-%m-%d"),
-                    feed_status="historical",
-                    kind="actual",
-                    status="ok",
-                    extra={
-                        "symbol": sym,
-                        "pe_ratio": m.get("peBasicExclExtraTTM"),
-                        "eps_ttm": m.get("epsDilutedTTM") or m.get("epsBasicExclExtraTTM") or m.get("epsBasicExclExtraAnnual"),
-                        "roe": m.get("roeTTM") or m.get("roeRfy"),
-                        "revenue_ttm_usd": m.get("revenuePerShareAnnual"),
-                        "52w_high": m.get("52WeekHigh"),
-                        "52w_low": m.get("52WeekLow"),
-                        "beta": m.get("beta"),
-                        "dividend_yield": m.get("dividendYieldIndicatedAnnual"),
-                        "book_value_per_share": m.get("bookValuePerShareAnnual"),
-                        "debt_equity": m.get("totalDebt/totalEquityAnnual"),
-                        "source": "Finnhub Financial Metrics",
-                        "as_of": time.strftime("%Y-%m-%d")
-                    }
-                )
-                _set_cache(cache_key, contract, ttl=300)
-                return contract
+        if res["ok"] and res["data"].get("metric"):
+            m = res["data"]["metric"]
+            pe_val = m.get("peBasicExclExtraTTM")
+            eps_val = m.get("epsDilutedTTM") or m.get("epsBasicExclExtraTTM") or m.get("epsBasicExclExtraAnnual")
+            roe_val = m.get("roeTTM") or m.get("roeRfy")
+            rev_ttm = m.get("revenuePerShareAnnual")
+            high_52 = m.get("52WeekHigh")
+            low_52 = m.get("52WeekLow")
+            beta_val = m.get("beta")
+            div_yield = m.get("dividendYieldIndicatedAnnual")
+            bv_share = m.get("bookValuePerShareAnnual")
+            de_ratio = m.get("totalDebt/totalEquityAnnual")
+
+    # If any key metric is missing (e.g. Finnhub free tier lacks EPS/ROE for some tickers), enrich from yfinance
+    if eps_val is None or roe_val is None or pe_val is None:
+        try:
+            import yfinance as _yf
+            _inf = _yf.Ticker(sym).info
+            if eps_val is None:
+                eps_val = _inf.get("trailingEps") or _inf.get("forwardEps")
+            if roe_val is None:
+                _r = _inf.get("returnOnEquity")
+                if _r is not None:
+                    roe_val = round(float(_r) * 100, 2)
+            if pe_val is None:
+                pe_val = _inf.get("trailingPE") or _inf.get("forwardPE")
+            if high_52 is None:
+                high_52 = _inf.get("fiftyTwoWeekHigh")
+            if low_52 is None:
+                low_52 = _inf.get("fiftyTwoWeekLow")
+            if beta_val is None:
+                beta_val = _inf.get("beta")
+            if div_yield is None and _inf.get("dividendYield"):
+                div_yield = round(float(_inf.get("dividendYield")) * 100, 2)
+            if bv_share is None:
+                bv_share = _inf.get("bookValue")
+            if de_ratio is None and _inf.get("debtToEquity"):
+                de_ratio = round(float(_inf.get("debtToEquity")) / 100, 4)
+        except Exception:
+            pass
+
+    if eps_val is not None or pe_val is not None or roe_val is not None:
+        contract = make_data_contract(
+            requested_symbol=sym,
+            provider_symbol=sym,
+            provider_name="Finnhub / Yahoo Finance Financial Metrics",
+            data_timestamp=time.strftime("%Y-%m-%d"),
+            feed_status="historical",
+            kind="actual",
+            status="ok",
+            extra={
+                "symbol": sym,
+                "pe_ratio": round(float(pe_val), 2) if pe_val is not None else None,
+                "eps_ttm": round(float(eps_val), 2) if eps_val is not None else None,
+                "roe": round(float(roe_val), 2) if roe_val is not None else None,
+                "revenue_ttm_usd": round(float(rev_ttm), 2) if rev_ttm is not None else None,
+                "52w_high": round(float(high_52), 2) if high_52 is not None else None,
+                "52w_low": round(float(low_52), 2) if low_52 is not None else None,
+                "beta": round(float(beta_val), 3) if beta_val is not None else None,
+                "dividend_yield": div_yield,
+                "book_value_per_share": round(float(bv_share), 2) if bv_share is not None else None,
+                "debt_equity": de_ratio,
+                "source": "Finnhub / Yahoo Finance Fundamentals",
+                "as_of": time.strftime("%Y-%m-%d")
+            }
+        )
+        _set_cache(cache_key, contract, ttl=300)
+        return contract
 
     return make_data_contract(
         requested_symbol=sym,
         provider_symbol="",
-        provider_name="Finnhub",
+        provider_name="Finnhub / Yahoo Finance",
         data_timestamp="",
         feed_status="unavailable",
         kind="actual",
