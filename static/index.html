@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -268,7 +268,7 @@
       </div>
     </div>
     <div class="header-actions">
-      <span class="tag actual" id="ws-indicator">Synthetic Demo Workspace</span>
+      <span class="tag actual" id="ws-indicator">🔴 Connecting to Live Feeds...</span>
       <span class="tag calculated" id="role-badge">Role: Owner</span>
       <button class="btn btn-outline" style="margin:0; padding:6px 14px; font-size:12px;" onclick="resetDemo()">Reload Demo</button>
     </div>
@@ -792,7 +792,7 @@
             <b>Place Market Paper Order (Alpaca API)</b>
             <div class="grid" style="grid-template-columns: 2fr 1fr 1fr 1fr; margin-top:8px;">
               <div><label>Symbol<input id="alp-sym" value="AMZN" onchange="selectTicker(this.value)"></label></div>
-              <div><label>Quantity<input id="alp-qty" type="number" value="0" placeholder="e.g. 1"></label></div>
+              <div><label>Quantity<input id="alp-qty" type="number" value="1" min="1" placeholder="e.g. 1"></label></div>
               <div>
                 <label>Side
                   <select id="alp-side"><option value="buy">BUY</option><option value="sell">SELL</option></select>
@@ -2894,7 +2894,7 @@ async function loadCompanyDeepDive(symParam, reqId) {
     if (met.status === 'ok') {
       if ($('#fund-pe')) $('#fund-pe').textContent = met.pe_ratio ? met.pe_ratio.toFixed(1) + 'x' : 'N/A';
       if ($('#fund-eps')) $('#fund-eps').textContent = met.eps_ttm ? '$' + met.eps_ttm.toFixed(2) : 'N/A';
-      if ($('#fund-roe')) $('#fund-roe').textContent = met.roe ? (met.roe * 100).toFixed(1) + '%' : 'N/A';
+      if ($('#fund-roe')) $('#fund-roe').textContent = met.roe ? met.roe.toFixed(1) + '%' : 'N/A';
       if ($('#fund-52h')) $('#fund-52h').textContent = met['52w_high'] ? '$' + met['52w_high'].toFixed(2) : 'N/A';
       if ($('#fund-52l')) $('#fund-52l').textContent = met['52w_low'] ? '$' + met['52w_low'].toFixed(2) : 'N/A';
     } else {
@@ -3076,7 +3076,9 @@ function initTelemetryWs() {
     ws.onopen = () => {
       console.log('ORACLE Live Telemetry Streaming WebSocket connected');
       const wsTag = $('#oracle-status-tag');
-      if (wsTag) wsTag.textContent = '🟢 WebSocket Streaming';
+      if (wsTag) { wsTag.textContent = '🟢 LIVE Data Pipeline'; wsTag.className = 'tag actual'; }
+      const wsIndicator = $('#ws-indicator');
+      if (wsIndicator) { wsIndicator.textContent = '🟢 LIVE Data Pipeline'; wsIndicator.className = 'tag actual'; }
       if (selectedTicker) {
         ws.send(JSON.stringify({ action: 'subscribe', symbol: selectedTicker }));
       }
@@ -3208,6 +3210,9 @@ async function loadFinLLMSignal(sym, reqId) {
       if ($('#deeplob-down')) $('#deeplob-down').textContent = ((dp.down || 0) * 100).toFixed(1) + '%';
       if ($('#deeplob-flat')) $('#deeplob-flat').textContent = ((dp.flat || 0) * 100).toFixed(1) + '%';
       if ($('#deeplob-up')) $('#deeplob-up').textContent = ((dp.up || 0) * 100).toFixed(1) + '%';
+      // Note: FinLLM and DeepLOB may disagree — FinLLM uses medium-term trend signals (days/weeks),
+      // while DeepLOB analyzes microsecond order-book dynamics. Divergence between models is expected
+      // and reflects different data horizons, not an error.
     }
   } catch(e) {}
 }

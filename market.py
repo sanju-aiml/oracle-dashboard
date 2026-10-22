@@ -621,25 +621,62 @@ def get_live_commodity(name="gold", mode="live") -> Dict[str, Any]:
                     _set_cache(cache_key, contract, ttl=30)
                     return contract
 
+        # Fallback: Yahoo Finance Brent Crude Futures (BZ=F)
+        try:
+            import yfinance as yf
+            t = yf.Ticker("BZ=F")
+            fi = t.fast_info
+            p = float(fi.last_price)
+            prev = float(getattr(fi, "previous_close", p))
+            chg = round(p - prev, 2)
+            chg_pct = round((chg / prev) * 100, 2) if prev else 0.0
+            contract = make_data_contract(
+                requested_symbol="BRENT_CRUDE_USD",
+                provider_symbol="BZ=F",
+                provider_name="Yahoo Finance (Brent Crude BZ=F)",
+                data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                feed_status="live",
+                kind="actual",
+                market_status="open",
+                status="ok",
+                extra={
+                    "commodity": "Brent Crude Oil",
+                    "symbol": "BZ=F",
+                    "price": round(p, 2),
+                    "change": chg,
+                    "change_percent": f"{chg_pct:+.2f}%",
+                    "unit": "USD per barrel (futures)",
+                    "currency": "USD",
+                    "source": "Yahoo Finance BZ=F",
+                    "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
+                }
+            )
+            _set_cache(cache_key, contract, ttl=30)
+            return contract
+        except Exception:
+            pass
+
         return make_data_contract(
             requested_symbol="BRENT_CRUDE_USD",
             provider_symbol="",
-            provider_name="OilPriceAPI",
+            provider_name="OilPriceAPI / Yahoo Finance",
             data_timestamp="",
-            feed_status="unavailable" if OILPRICE_KEY else "not_configured",
+            feed_status="unavailable",
             kind="actual",
             status="error",
-            extra={"error": "Crude oil live quote unavailable from OilPriceAPI.", "commodity": "Brent Crude Oil"}
+            extra={"error": "Crude oil live quote unavailable from live providers.", "commodity": "Brent Crude Oil"}
         )
 
-    # 2. Gold Spot (XAU/USD) via TwelveData
+    # 2. Gold Spot (XAU/USD) via TwelveData → yfinance GC=F fallback
     if any(w in k for w in ("gold", "xau")):
+        # Primary: TwelveData
         if TWELVEDATA_KEY:
             url = f"https://api.twelvedata.com/price?symbol=XAU/USD&apikey={TWELVEDATA_KEY}"
             res = _http_request(url, timeout=4, retries=1, provider_name="twelvedata")
             if res["ok"] and "price" in res["data"]:
                 cur = float(res["data"]["price"])
-                inr_per_10g = round((cur * 88.62 / 31.1035) * 10, 0)
+                fx_rate = 84.0  # approximate INR/USD
+                inr_per_10g = round((cur * fx_rate / 31.1035) * 10, 0)
                 contract = make_data_contract(
                     requested_symbol="XAU/USD",
                     provider_symbol="XAU/USD",
@@ -657,21 +694,60 @@ def get_live_commodity(name="gold", mode="live") -> Dict[str, Any]:
                         "currency": "USD",
                         "inr_approx_10g": inr_per_10g,
                         "source": "TwelveData Spot Markets",
-                        "as_of": time.strftime("%Y-%m-%d %H:%M:%S")
+                        "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
                     }
                 )
                 _set_cache(cache_key, contract, ttl=30)
                 return contract
 
+        # Fallback: Yahoo Finance Gold Futures (GC=F) — highly correlated with spot
+        try:
+            import yfinance as yf
+            t = yf.Ticker("GC=F")
+            fi = t.fast_info
+            cur = float(fi.last_price)
+            prev = float(getattr(fi, "previous_close", cur))
+            chg = round(cur - prev, 2)
+            chg_pct = round((chg / prev) * 100, 2) if prev else 0.0
+            fx_rate = 84.0  # approximate INR/USD
+            inr_per_10g = round((cur * fx_rate / 31.1035) * 10, 0)
+            contract = make_data_contract(
+                requested_symbol="XAU/USD",
+                provider_symbol="GC=F",
+                provider_name="Yahoo Finance (Gold Futures GC=F)",
+                data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                feed_status="live",
+                kind="actual",
+                market_status="open",
+                status="ok",
+                extra={
+                    "commodity": "Gold",
+                    "symbol": "GC=F",
+                    "price": round(cur, 2),
+                    "change": chg,
+                    "change_percent": f"{chg_pct:+.2f}%",
+                    "unit": "USD per troy oz (futures)",
+                    "currency": "USD",
+                    "inr_approx_10g": inr_per_10g,
+                    "source": "Yahoo Finance GC=F",
+                    "note": "Gold futures (GC=F); highly correlated with spot price.",
+                    "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
+                }
+            )
+            _set_cache(cache_key, contract, ttl=30)
+            return contract
+        except Exception:
+            pass
+
         return make_data_contract(
             requested_symbol="XAU/USD",
             provider_symbol="",
-            provider_name="TwelveData",
+            provider_name="TwelveData / Yahoo Finance",
             data_timestamp="",
-            feed_status="unavailable" if TWELVEDATA_KEY else "not_configured",
+            feed_status="unavailable",
             kind="actual",
             status="error",
-            extra={"error": "Gold spot quote unavailable from TwelveData.", "commodity": "Gold Spot"}
+            extra={"error": "Gold price unavailable from live providers.", "commodity": "Gold Spot"}
         )
 
     # 3. Silver Spot — via yfinance SI=F (Silver Futures, liquid proxy for spot)
@@ -860,10 +936,42 @@ def get_forex(from_currency="USD", to_currency="INR", mode="live") -> Dict[str, 
             _set_cache(cache_key, contract, ttl=30)
             return contract
 
+    # Fallback: Yahoo Finance for forex pairs
+    try:
+        import yfinance as yf
+        yf_pair = f"{fc}{tc}=X"
+        t = yf.Ticker(yf_pair)
+        fi = t.fast_info
+        rate = float(fi.last_price)
+        if rate > 0:
+            contract = make_data_contract(
+                requested_symbol=pair,
+                provider_symbol=yf_pair,
+                provider_name="Yahoo Finance Forex",
+                data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                feed_status="live",
+                kind="actual",
+                market_status="open",
+                status="ok",
+                extra={
+                    "pair": pair,
+                    "rate": round(rate, 4),
+                    "from": fc,
+                    "to": tc,
+                    "source": "Yahoo Finance Forex",
+                    "note": "15-minute delayed forex data per Yahoo Finance license.",
+                    "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
+                }
+            )
+            _set_cache(cache_key, contract, ttl=30)
+            return contract
+    except Exception:
+        pass
+
     return make_data_contract(
         requested_symbol=pair,
         provider_symbol="",
-        provider_name="None",
+        provider_name="TwelveData / Yahoo Finance",
         data_timestamp="",
         feed_status="unavailable",
         kind="actual",
@@ -1199,8 +1307,8 @@ def get_stock_metrics(symbol="AAPL", mode="live") -> Dict[str, Any]:
                     extra={
                         "symbol": sym,
                         "pe_ratio": m.get("peBasicExclExtraTTM"),
-                        "eps_ttm": m.get("epsBasicExclExtraAnnual"),
-                        "roe": m.get("roeRfy"),
+                        "eps_ttm": m.get("epsDilutedTTM") or m.get("epsBasicExclExtraTTM") or m.get("epsBasicExclExtraAnnual"),
+                        "roe": m.get("roeTTM") or m.get("roeRfy"),
                         "revenue_ttm_usd": m.get("revenuePerShareAnnual"),
                         "52w_high": m.get("52WeekHigh"),
                         "52w_low": m.get("52WeekLow"),
