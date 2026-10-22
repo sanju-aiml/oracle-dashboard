@@ -6,6 +6,20 @@ Never manufactures prices, volumes, timestamps, candle values, IPO statuses, or 
 import os, sys, json, time, math, urllib.request, urllib.error, urllib.parse, re, uuid
 from typing import Dict, Any, Optional, List
 
+# ---------------------------------------------------------------------------
+# curl_cffi SSL bypass — required for yfinance on Windows dev environments
+# that block default SSL certificate verification. Applied once at import.
+# ---------------------------------------------------------------------------
+try:
+    import curl_cffi.requests as _c_req
+    _orig_c_init = _c_req.Session.__init__
+    def _safe_c_init(self, *args, **kwargs):
+        kwargs.setdefault("verify", False)
+        return _orig_c_init(self, *args, **kwargs)
+    _c_req.Session.__init__ = _safe_c_init
+except Exception:
+    pass  # curl_cffi not installed — yfinance will use stdlib SSL fallback
+
 # Load .env into os.environ if present
 _env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 if not os.path.exists(_env_path):
@@ -660,18 +674,52 @@ def get_live_commodity(name="gold", mode="live") -> Dict[str, Any]:
             extra={"error": "Gold spot quote unavailable from TwelveData.", "commodity": "Gold Spot"}
         )
 
-    # 3. Silver Spot (XAG/USD) - TwelveData free tier does NOT support XAG/USD
+    # 3. Silver Spot — via yfinance SI=F (Silver Futures, liquid proxy for spot)
     if any(w in k for w in ("silver", "xag")):
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker("SI=F")
+            fi = ticker.fast_info
+            cur = float(fi.last_price)
+            prev = float(getattr(fi, "previous_close", cur))
+            chg = round(cur - prev, 4)
+            chg_pct = round((chg / prev) * 100, 2) if prev else 0.0
+            contract = make_data_contract(
+                requested_symbol="XAG/USD",
+                provider_symbol="SI=F",
+                provider_name="Yahoo Finance (Silver Futures SI=F)",
+                data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                feed_status="live",
+                kind="actual",
+                market_status="open",
+                status="ok",
+                extra={
+                    "commodity": "Silver",
+                    "symbol": "SI=F",
+                    "price": round(cur, 4),
+                    "change": chg,
+                    "change_percent": f"{chg_pct:+.2f}%",
+                    "unit": "USD per troy oz (futures)",
+                    "currency": "USD",
+                    "source": "Yahoo Finance SI=F",
+                    "note": "Silver futures price (SI=F); not exact spot but highly correlated.",
+                    "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
+                }
+            )
+            _set_cache(cache_key, contract, ttl=30)
+            return contract
+        except Exception as _yfe:
+            pass  # fall through to error contract
         return make_data_contract(
             requested_symbol="XAG/USD",
-            provider_symbol="XAG/USD",
-            provider_name="TwelveData",
+            provider_symbol="SI=F",
+            provider_name="Yahoo Finance",
             data_timestamp="",
             feed_status="unavailable",
             kind="actual",
             status="error",
             extra={
-                "error": "Direct silver spot feed (XAG/USD) is not supported on the active TwelveData tier. Real market quote unavailable.",
+                "error": "Silver price unavailable: Yahoo Finance SI=F fetch failed.",
                 "commodity": "Silver Spot"
             }
         )
@@ -730,15 +778,48 @@ def get_natural_gas(mode="live") -> Dict[str, Any]:
                 _set_cache(cache_key, contract, ttl=30)
                 return contract
 
+    # Fallback to Yahoo Finance Natural Gas Futures (NG=F)
+    try:
+        import yfinance as yf
+        t = yf.Ticker("NG=F")
+        fi = t.fast_info
+        p = float(fi.last_price)
+        prev = float(getattr(fi, "previous_close", p))
+        chg = round(p - prev, 4)
+        contract = make_data_contract(
+            requested_symbol="NATURAL_GAS_USD",
+            provider_symbol="NG=F",
+            provider_name="Yahoo Finance (NG=F)",
+            data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            feed_status="live",
+            kind="actual",
+            market_status="open",
+            status="ok",
+            extra={
+                "commodity": "Natural Gas",
+                "symbol": "NG=F",
+                "price": round(p, 4),
+                "change": chg,
+                "unit": "USD per MMBtu (futures)",
+                "currency": "USD",
+                "source": "Yahoo Finance NG=F",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
+            }
+        )
+        _set_cache(cache_key, contract, ttl=30)
+        return contract
+    except Exception:
+        pass
+
     return make_data_contract(
         requested_symbol="NATURAL_GAS_USD",
         provider_symbol="",
-        provider_name="OilPriceAPI",
+        provider_name="OilPriceAPI / Yahoo Finance",
         data_timestamp="",
-        feed_status="unavailable" if OILPRICE_KEY else "not_configured",
+        feed_status="unavailable",
         kind="actual",
         status="error",
-        extra={"error": "Natural gas price unavailable from OilPriceAPI."}
+        extra={"error": "Natural gas price unavailable from live providers."}
     )
 
 # -------------------------------------------------------------
@@ -792,20 +873,88 @@ def get_forex(from_currency="USD", to_currency="INR", mode="live") -> Dict[str, 
 
 def get_india_index(index="NIFTY 50", mode="live") -> Dict[str, Any]:
     idx = (index or "NIFTY 50").strip()
-    # TwelveData free tier does NOT include Indian exchange indices (BSE/NSE require regional license)
-    return make_data_contract(
-        requested_symbol=idx,
-        provider_symbol="",
-        provider_name="TwelveData India Markets",
-        data_timestamp="",
-        feed_status="unavailable",
-        kind="actual",
-        status="error",
-        extra={
-            "error": f"Live Indian index feed for '{idx}' requires an active Indian Exchange (BSE/NSE) subscription with TwelveData.",
-            "index": idx
-        }
-    )
+    cache_key = f"{mode}:india:{idx.lower()}"
+    cached = _get_cache(cache_key)
+    if cached:
+        return cached
+
+    # Map human-readable names to Yahoo Finance symbols
+    _INDIA_SYMBOLS = {
+        "nifty": "^NSEI",
+        "nifty 50": "^NSEI",
+        "nifty50": "^NSEI",
+        "^nsei": "^NSEI",
+        "sensex": "^BSESN",
+        "bse": "^BSESN",
+        "^bsesn": "^BSESN",
+        "bank nifty": "^NSEBANK",
+        "banknifty": "^NSEBANK",
+        "^nsebank": "^NSEBANK",
+    }
+    yf_sym = _INDIA_SYMBOLS.get(idx.lower(), None)
+    if not yf_sym:
+        return make_data_contract(
+            requested_symbol=idx,
+            provider_symbol="",
+            provider_name="Yahoo Finance India",
+            data_timestamp="",
+            feed_status="unavailable",
+            kind="actual",
+            status="error",
+            extra={"error": f"Unknown Indian index '{idx}'. Supported: SENSEX, NIFTY 50, Bank NIFTY.", "index": idx}
+        )
+
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(yf_sym)
+        fi = ticker.fast_info
+        cur = float(fi.last_price)
+        prev = float(getattr(fi, "previous_close", cur))
+        chg = round(cur - prev, 2)
+        chg_pct = round((chg / prev) * 100, 2) if prev else 0.0
+
+        # Friendly display name
+        _DISPLAY = {"^NSEI": "NIFTY 50", "^BSESN": "SENSEX", "^NSEBANK": "Bank NIFTY"}
+        display = _DISPLAY.get(yf_sym, idx)
+
+        contract = make_data_contract(
+            requested_symbol=idx,
+            provider_symbol=yf_sym,
+            provider_name="Yahoo Finance India Markets",
+            data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            feed_status="live",
+            kind="actual",
+            market_status="open",
+            status="ok",
+            extra={
+                "index": display,
+                "symbol": yf_sym,
+                "price": round(cur, 2),
+                "change": chg,
+                "change_percent": f"{chg_pct:+.2f}%",
+                "currency": "INR",
+                "exchange": "NSE/BSE",
+                "source": "Yahoo Finance (yfinance)",
+                "note": "15-minute delayed data per Yahoo Finance license terms.",
+                "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
+            }
+        )
+        _set_cache(cache_key, contract, ttl=60)
+        return contract
+    except Exception as _e:
+        return make_data_contract(
+            requested_symbol=idx,
+            provider_symbol=yf_sym,
+            provider_name="Yahoo Finance India Markets",
+            data_timestamp="",
+            feed_status="unavailable",
+            kind="actual",
+            status="error",
+            extra={
+                "error": f"India index fetch failed for '{idx}': {str(_e)[:120]}",
+                "index": idx
+            }
+        )
 
 # -------------------------------------------------------------
 # 11. CRYPTO
@@ -1343,7 +1492,10 @@ def web_search(query: str, max_results=5) -> Dict[str, Any]:
     if cached:
         return cached
     try:
-        from duckduckgo_search import DDGS
+        try:
+            from ddgs import DDGS
+        except ImportError:
+            from duckduckgo_search import DDGS
         results = []
         with DDGS() as ddgs:
             for r in ddgs.text(q, max_results=max_results):

@@ -620,7 +620,7 @@
           <span style="font-weight:700; color:var(--ink);">🇮🇳 SENSEX (BSE)</span>
           <span class="tag actual" style="font-size:10px;">BSE Live</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="sensex-price">Feed unavailable (license required)</div>
+        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="sensex-price">Loading...</div>
         <small style="color:var(--mute)">INR · Bombay Stock Exchange</small>
       </div>
 
@@ -630,7 +630,7 @@
           <span style="font-weight:700; color:var(--ink);">🇮🇳 NIFTY 50 (NSE)</span>
           <span class="tag actual" style="font-size:10px;">NSE Live</span>
         </div>
-        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="nifty-price">Feed unavailable (license required)</div>
+        <div style="font:700 22px Georgia, serif; color:var(--ink); margin:6px 0;" id="nifty-price">Loading...</div>
         <small style="color:var(--mute)">INR · National Stock Exchange</small>
       </div>
 
@@ -2820,10 +2820,10 @@ async function fetchLiveTickerQuote(symParam, reqId) {
 async function fetchGlobalTicks() {
   try {
     const sx = await api('market/india?index=sensex&mode=live');
-    if ($('#sensex-price')) $('#sensex-price').textContent = sx.status === 'ok' && sx.price ? sx.price.toLocaleString('en-IN') : 'Unavailable (Requires BSE License)';
+    if ($('#sensex-price')) $('#sensex-price').textContent = sx.status === 'ok' && sx.price ? sx.price.toLocaleString('en-IN') : 'Unavailable';
 
     const nf = await api('market/india?index=nifty&mode=live');
-    if ($('#nifty-price')) $('#nifty-price').textContent = nf.status === 'ok' && nf.price ? nf.price.toLocaleString('en-IN') : 'Unavailable (Requires NSE License)';
+    if ($('#nifty-price')) $('#nifty-price').textContent = nf.status === 'ok' && nf.price ? nf.price.toLocaleString('en-IN') : 'Unavailable';
 
     const fx = await api('market/forex?from=USD&to=INR&mode=live');
     if ($('#forex-usd-inr')) $('#forex-usd-inr').textContent = fx.status === 'ok' && fx.rate ? '₹' + fx.rate.toFixed(2) : 'Unavailable';
@@ -2834,7 +2834,7 @@ async function fetchGlobalTicks() {
     const eth = await api('market/crypto?symbol=ETH&mode=live');
     if ($('#eth-price')) $('#eth-price').textContent = eth.status === 'ok' && eth.price ? '$' + eth.price.toLocaleString() : 'Unavailable';
 
-    const ng = await api('market/naturalgas&mode=live');
+    const ng = await api('market/naturalgas?mode=live');
     if ($('#natgas-price')) $('#natgas-price').textContent = ng.status === 'ok' && ng.price ? '$' + ng.price.toFixed(3) : 'Unavailable';
 
     const ov = await api('market/overview?mode=live');

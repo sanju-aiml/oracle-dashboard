@@ -193,22 +193,34 @@ def test_8_market_closed_and_delayed_feed_identified():
 # Test 9: IPO and commodity widgets never misrepresent hardcoded data as current
 # -------------------------------------------------------------
 def test_9_ipo_and_commodity_never_misrepresent_hardcoded():
-    """In LIVE mode, IPO widget must state not_configured, and silver must state unavailable."""
+    """In LIVE mode, IPO widget must state not_configured.
+    Silver and Indian indices now use yfinance (SI=F / ^BSESN / ^NSEI) and
+    must return real prices (status=ok) or an explicit unavailable error —
+    never synthetic/fabricated data.
+    """
     # Live IPO must NOT return static Swiggy array as live filings
     live_ipos = market.get_ipos(mode="live")
     assert live_ipos["status"] == "unavailable"
     assert live_ipos["feed_status"] == "not_configured"
     assert live_ipos["ipos"] == []
 
-    # Silver in live mode cannot return fake gold/86.4 ratio as real spot
+    # Silver is now sourced from Yahoo Finance SI=F via yfinance.
+    # It must return either a real price (status=ok, kind=actual) or an
+    # explicit unavailable error — never kind=synthetic in live mode.
     live_silver = market.get_live_commodity("silver", mode="live")
-    assert live_silver["status"] == "error"
-    assert live_silver["feed_status"] == "unavailable"
+    assert live_silver["kind"] == "actual", "Silver must never return synthetic data in live mode"
+    assert live_silver["status"] in ("ok", "error"), f"Unexpected silver status: {live_silver['status']}"
+    if live_silver["status"] == "ok":
+        assert live_silver.get("price", 0) > 0, "Silver ok status must carry a positive real price"
 
-    # Indian index without regional plan must state unavailable
+    # Indian indices are now sourced from Yahoo Finance (yfinance ^BSESN / ^NSEI).
+    # Must return either a real price (status=ok, kind=actual) or an
+    # explicit unavailable error — never kind=synthetic in live mode.
     live_sensex = market.get_india_index("SENSEX", mode="live")
-    assert live_sensex["status"] == "error"
-    assert live_sensex["feed_status"] == "unavailable"
+    assert live_sensex["kind"] == "actual", "SENSEX must never return synthetic data in live mode"
+    assert live_sensex["status"] in ("ok", "error"), f"Unexpected SENSEX status: {live_sensex['status']}"
+    if live_sensex["status"] == "ok":
+        assert live_sensex.get("price", 0) > 0, "SENSEX ok status must carry a positive real price"
 
 # -------------------------------------------------------------
 # Test 10: API keys and private credentials never appear in logs or client responses
