@@ -150,6 +150,44 @@ class H(BaseHTTPRequestHandler):
                     return self.send(200, core.delete_alert(usr, int(q.get("id") or body.get("id", 0))))
                 return self.send(200, core.list_alerts(usr))
 
+            if r == "finllm/status":
+                import finllm_engine
+                return self.send(200, finllm_engine.get_model_status())
+            if r == "finllm/signal":
+                import finllm_engine
+                return self.send(200, finllm_engine.predict_signal(q.get("symbol", "AMZN"), mode=q.get("mode", "live")))
+            if r == "finllm/deeplob":
+                import finllm_engine
+                return self.send(200, finllm_engine.run_deeplob_signal(q.get("symbol", "AMZN")))
+            if r == "finllm/calc":
+                import finllm_engine
+                body = self.body()
+                return self.send(200, finllm_engine.calculate_ca_banking(body.get("type", ""), body.get("params", {})))
+            if r == "finllm/chat":
+                import finllm_engine
+                body = self.body()
+                user = self.user()
+                u_name = user["username"] if user else "Guest Investor"
+                return self.send(200, finllm_engine.run_finllm_agent(body.get("message", ""), user_name=u_name))
+            if r == "finllm/status":
+                import finllm_engine
+                return self.send(200, finllm_engine.get_model_status())
+            if r == "finllm/signal":
+                import finllm_engine
+                return self.send(200, finllm_engine.predict_signal(q.get("symbol", "AMZN"), mode=q.get("mode", "live")))
+            if r == "finllm/deeplob":
+                import finllm_engine
+                return self.send(200, finllm_engine.run_deeplob_signal(q.get("symbol", "AMZN")))
+            if r == "finllm/calc":
+                import finllm_engine
+                body = self.body()
+                return self.send(200, finllm_engine.calculate_ca_banking(body.get("type", ""), body.get("params", {})))
+            if r == "finllm/chat":
+                import finllm_engine
+                body = self.body()
+                user = self.user()
+                u_name = user["username"] if user else "Guest Investor"
+                return self.send(200, finllm_engine.run_finllm_agent(body.get("message", ""), user_name=u_name))
             if r == "cricket":
                 return self.send(200, core.cricket())
             if r == "cricket/simulate":
@@ -552,6 +590,51 @@ try:
             await asyncio.gather(receiver(), sender())
         except Exception:
             pass
+
+    # ==========================================
+    # FINLLM QUANT & DECISION INTELLIGENCE ROUTES
+    # ==========================================
+    @app.get("/api/finllm/status")
+    def api_finllm_status():
+        import finllm_engine
+        return finllm_engine.get_model_status()
+
+    @app.get("/api/finllm/signal")
+    def api_finllm_signal(symbol: str = "AMZN", mode: str = "live"):
+        import finllm_engine
+        return finllm_engine.predict_signal(symbol, mode=mode)
+
+    class FinLLMSignalPayload(BaseModel):
+        symbol: str = "AMZN"
+        mode: Optional[str] = "live"
+
+    @app.post("/api/finllm/signal")
+    def api_finllm_signal_post(p: FinLLMSignalPayload):
+        import finllm_engine
+        return finllm_engine.predict_signal(p.symbol, mode=p.mode or "live")
+
+    @app.get("/api/finllm/deeplob")
+    def api_finllm_deeplob(symbol: str = "AMZN"):
+        import finllm_engine
+        return finllm_engine.run_deeplob_signal(symbol)
+
+    class FinLLMCalcPayload(BaseModel):
+        type: str
+        params: dict
+
+    @app.post("/api/finllm/calc")
+    def api_finllm_calc(p: FinLLMCalcPayload):
+        import finllm_engine
+        return finllm_engine.calculate_ca_banking(p.type, p.params)
+
+    class FinLLMChatPayload(BaseModel):
+        message: str
+
+    @app.post("/api/finllm/chat")
+    def api_finllm_chat(p: FinLLMChatPayload, user=Depends(get_current_user)):
+        import finllm_engine
+        u_name = user["username"] if user else "Guest Investor"
+        return finllm_engine.run_finllm_agent(p.message, user_name=u_name)
 
     @app.get("/api/cricket")
     def api_cricket():

@@ -439,6 +439,43 @@ def chat(msg, dash):
         if "fd" in m and len(n) >= 3:
             r = fd_calculator(n[0], n[1], n[2])
             return f"Fixed Deposit: Principal ₹{r['principal']:,.0f} at {n[1]}% for {n[2]} years yields ₹{r['maturity_value']:,.0f} (Interest: ₹{r['interest_earned']:,.0f})."
+        if "gst" in m and len(n) >= 1:
+            amt = n[0]
+            rate = n[1] if len(n) >= 2 else 18.0
+            try:
+                import finllm_engine
+                res = finllm_engine.calculate_ca_banking("gst", {"amount": amt, "rate_pct": rate})["result"]
+                return f"GST Calculation for ₹{amt:,.2f} at {rate}%: GST = ₹{res['gst']:,.2f} (CGST: ₹{res['cgst']:,.2f}, SGST: ₹{res['sgst']:,.2f}), Total = ₹{res['total']:,.2f}."
+            except Exception as e:
+                return f"GST calculation failed: {str(e)}"
+        if "emi" in m and len(n) >= 1:
+            p = n[0]
+            r = n[1] if len(n) >= 2 else 8.5
+            y = int(n[2]) if len(n) >= 3 else 10
+            try:
+                import finllm_engine
+                res = finllm_engine.calculate_ca_banking("emi", {"principal": p, "rate_pct": r, "tenure_years": y})["result"]
+                return f"Loan EMI Calculation: Principal ₹{p:,.2f} at {r}% for {y} years: Monthly EMI = ₹{res['emi']:,.2f}, Total Interest = ₹{res['total_interest']:,.2f}, Total Payment = ₹{res.get('total_paid', 0):,.2f}."
+            except Exception as e:
+                return f"EMI calculation failed: {str(e)}"
+        if "tds" in m and len(n) >= 1:
+            amt = n[0]
+            pan = "no pan" not in m
+            try:
+                import finllm_engine
+                res = finllm_engine.calculate_ca_banking("tds_194c", {"amount": amt, "pan": pan})["result"]
+                return f"TDS u/s 194C on ₹{amt:,.2f} ({'with PAN' if pan else 'without PAN'}): TDS = ₹{res['tds']:,.2f} ({res['rate_pct']}%), Net Payable = ₹{res['net']:,.2f}."
+            except Exception as e:
+                return f"TDS calculation failed: {str(e)}"
+        if ("income tax" in m or "tax regime" in m or "new regime" in m) and len(n) >= 1:
+            inc = n[0]
+            ded = n[1] if len(n) >= 2 else 75000.0
+            try:
+                import finllm_engine
+                res = finllm_engine.calculate_ca_banking("tax_new_regime", {"income": inc})["result"]
+                return f"Income Tax (New Regime FY25-26): Gross Income ₹{inc:,.2f}, Standard Deduction ₹{ded:,.2f}, Taxable Income ₹{res['taxable_income']:,.2f}, Base Tax ₹{res['base_tax']:,.2f}, Rebate 87A: ₹{res['rebate_87a']:,.2f}, Cess (4%): ₹{res['cess']:,.2f}, Total Tax = ₹{res['total']:,.2f}."
+            except Exception as e:
+                return f"Tax calculation failed: {str(e)}"
     except ValueError as e:
         return str(e)
         

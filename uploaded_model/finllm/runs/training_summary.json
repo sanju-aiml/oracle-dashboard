@@ -1,0 +1,29 @@
+{
+  "trained_at": "2026-10-22 03:03:58 UTC",
+  "duration_seconds": 88.42,
+  "gate_passed": false,
+  "market_metrics": {
+    "direction_acc": 0.3621228644129407,
+    "naive_acc": 0.3581243184296619,
+    "acc_vs_naive": 0.003998545983278812,
+    "hit_rate_when_trading": 0.5147742218325296,
+    "sharpe_after_costs": 0.17243716482571667,
+    "max_drawdown": 0.7214783384192689,
+    "cagr": 0.007351455707280019,
+    "bh_sharpe": 0.8619060514743747,
+    "deflated_sharpe_prob": 0.47287032178380817,
+    "n_days": 1729
+  },
+  "llm_metrics": {
+    "calc_accuracy": 1.0,
+    "json_validity": 1.0,
+    "hallucination_rate": 0.0
+  },
+  "artifacts": {
+    "signal_model": "C:\\Users\\BOTTA THARUN\\Videos\\oracle\\oracle\\uploaded_model\\finllm\\runs\\signal_model.joblib",
+    "deeplob_model": "C:\\Users\\BOTTA THARUN\\Videos\\oracle\\oracle\\uploaded_model\\finllm\\runs\\deeplob.pt",
+    "sft_train": "C:\\Users\\BOTTA THARUN\\Videos\\oracle\\oracle\\uploaded_model\\finllm\\data\\sft_train.jsonl",
+    "sft_val": "C:\\Users\\BOTTA THARUN\\Videos\\oracle\\oracle\\uploaded_model\\finllm\\data\\sft_val.jsonl",
+    "gate_log": "C:\\Users\\BOTTA THARUN\\Videos\\oracle\\oracle\\uploaded_model\\finllm\\runs\\gate_log.jsonl"
+  }
+}

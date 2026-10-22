@@ -429,6 +429,18 @@ def get_ohlcv(symbol="AMZN", interval="1day", outputsize=45, mode="live") -> Dic
     if cached:
         return cached
 
+    if mode == "demo":
+        return make_data_contract(
+            requested_symbol=sym,
+            provider_symbol=sym,
+            provider_name="Synthetic Demo Engine",
+            data_timestamp=time.strftime("%Y-%m-%d"),
+            feed_status="synthetic_demo",
+            kind="synthetic",
+            status="ok",
+            extra={"symbol": sym, "interval": interval, "candles": [], "note": "DEMO MODE: Synthetic placeholder."}
+        )
+
     if TWELVEDATA_KEY:
         url = f"https://api.twelvedata.com/time_series?symbol={urllib.parse.quote(sym)}&interval={interval}&outputsize={outputsize}&apikey={TWELVEDATA_KEY}"
         res = _http_request(url, timeout=5, retries=1, provider_name="twelvedata")
@@ -479,18 +491,6 @@ def get_ohlcv(symbol="AMZN", interval="1day", outputsize=45, mode="live") -> Dic
                 )
                 _set_cache(cache_key, contract, ttl=60)
                 return contract
-
-    if mode == "demo":
-        return make_data_contract(
-            requested_symbol=sym,
-            provider_symbol=sym,
-            provider_name="Synthetic Demo Engine",
-            data_timestamp=time.strftime("%Y-%m-%d"),
-            feed_status="synthetic_demo",
-            kind="synthetic",
-            status="ok",
-            extra={"symbol": sym, "interval": interval, "candles": [], "note": "DEMO MODE: Synthetic placeholder."}
-        )
 
     return make_data_contract(
         requested_symbol=sym,

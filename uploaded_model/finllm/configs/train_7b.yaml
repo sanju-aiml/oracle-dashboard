@@ -1,0 +1,18 @@
+base_model: Qwen/Qwen2.5-7B-Instruct   # swap: meta-llama/Llama-3.1-8B-Instruct, mistralai/Mistral-7B-Instruct-v0.3
+output_dir: runs/finllm-7b
+max_seq_len: 4096
+lora: {r: 64, alpha: 128, dropout: 0.05}
+lr: 1.0e-4
+epochs: 3
+batch_size: 2
+grad_accum: 16
+quant_4bit: true
+gate:                       # a round FAILS unless ALL pass (finllm/train/gate.py)
+  max_rounds: 6
+  min_direction_acc_vs_naive: 0.02   # must beat majority-class baseline by 2 pts out-of-sample
+  min_sharpe_after_costs: 0.5
+  max_drawdown: 0.25
+  min_json_validity: 0.99
+  max_hallucination_rate: 0.02
+  min_calc_accuracy: 0.98            # CA/banking arithmetic (GST, TDS, EMI, interest)
+  cost_bps: 10
