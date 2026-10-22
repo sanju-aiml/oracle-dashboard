@@ -121,7 +121,7 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, market.get_forex(q.get("from", "USD"), q.get("to", "INR")))
             if r == "market/india":
                 return self.send(200, market.get_india_index(q.get("index", "NIFTY 50")))
-            if r == "market/naturalgas":
+            if r.startswith("market/naturalgas"):
                 return self.send(200, market.get_natural_gas())
             if r == "market/profile":
                 return self.send(200, market.get_company_profile(q.get("symbol", "AAPL")))
@@ -463,6 +463,7 @@ try:
 
     # Natural Gas
     @app.get("/api/market/naturalgas")
+    @app.get("/api/market/naturalgas&mode=live")
     def api_natural_gas(mode: str = "live"):
         return market.get_natural_gas(mode=mode)
 
