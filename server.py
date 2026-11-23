@@ -760,11 +760,14 @@ try:
         return {"reply": core.chat(p.message, d_ctx)}
 
     # Mount static assets
-    if os.path.exists(STATIC):
-        @app.get("/")
-        def serve_index():
-            return FileResponse(os.path.join(STATIC, "index.html"), headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    @app.get("/")
+    def serve_index():
+        idx = os.path.join(STATIC, "index.html")
+        if not os.path.exists(idx):
+            idx = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+        return FileResponse(idx, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
+    if os.path.exists(STATIC):
         app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 except Exception as _boot_err:
