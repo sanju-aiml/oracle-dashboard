@@ -501,6 +501,25 @@ try:
     def api_watchlist_prices(p: WatchlistPayload):
         return market.get_watchlist_prices(p.symbols, mode=p.mode or "live")
 
+    # Paper Trading (oracle_ai paper account summary)
+    @app.api_route("/api/market/paper-trade", methods=["GET", "POST"])
+    async def api_paper_trade(request: Request):
+        if request.method == "GET":
+            import bot as _bot_mod
+            return await asyncio.to_thread(_bot_mod.account_summary)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        action = body.get("action", "summary")
+        if action == "summary":
+            import bot as _bot_mod
+            return await asyncio.to_thread(_bot_mod.account_summary)
+        symbol = body.get("symbol", "")
+        shares = int(body.get("shares", 0))
+        price = float(body.get("price", 0.0))
+        return paper_trader.execute_trade(symbol, action, shares, price)
+
     # Watchlist (SQLite-backed)
     class WatchlistAddPayload(BaseModel):
         symbol: str
@@ -583,7 +602,7 @@ try:
                             "requested_symbol": active_symbol,
                             "data": sym_quote
                         })
-                    await asyncio.sleep(6)
+                    await asyncio.sleep(15)
             except (WebSocketDisconnect, Exception):
                 pass
 
@@ -691,11 +710,51 @@ try:
     def api_audit(user=Depends(require_user)):
         return {"kind": "actual", "logs": core.get_audit_trail(user)}
 
+    from oracle_wiring import build_bot_router
+    import finllm_engine
+    app.include_router(build_bot_router(
+        app, market, core, get_current_user,
+        signal_fn=finllm_engine.predict_signal,
+        deeplob_fn=finllm_engine.run_deeplob_signal,
+        place_order_fn=lambda rec: market.place_alpaca_order(rec.get("symbol", "AMZN"), rec.get("qty", 1), rec.get("side", "buy"))
+    ))
+
+    # Mount oracle_ai market-intelligence backend
+    import sys
+    _oracle_ai_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "oracle_ai")
+    if _oracle_ai_dir not in sys.path:
+        sys.path.insert(0, _oracle_ai_dir)
+
+    from oracle_ai import routes as oracle_ai_routes
+    from oracle_ai import bot as oracle_ai_bot
+
+    app.include_router(oracle_ai_routes.router)
+
+    _stop_oracle_bot = asyncio.Event()
+
+    @app.on_event("startup")
+    async def _start_oracle_bot():
+        asyncio.create_task(oracle_ai_bot.run_forever(_stop_oracle_bot))
+        try:
+            from oracle_ai.smartapi_client import stream_manager
+            stream_manager.start()
+        except Exception as e:
+            pass
+
+    @app.on_event("shutdown")
+    async def _stop_oracle_bot_task():
+        _stop_oracle_bot.set()
+        try:
+            from oracle_ai.smartapi_client import stream_manager
+            stream_manager.stop()
+        except Exception:
+            pass
+
     class ChatPayload(BaseModel):
         message: str
 
-    @app.post("/api/chat")
-    def api_chat(p: ChatPayload, user=Depends(get_current_user)):
+    @app.post("/api/chat_legacy")
+    def api_chat_legacy(p: ChatPayload, user=Depends(get_current_user)):
         d_ctx = core.workspace_dashboard(user) if user else core.dashboard(core.demo_df(), "demo")
         return {"reply": core.chat(p.message, d_ctx)}
 
@@ -703,7 +762,7 @@ try:
     if os.path.exists(STATIC):
         @app.get("/")
         def serve_index():
-            return FileResponse(os.path.join(STATIC, "index.html"))
+            return FileResponse(os.path.join(STATIC, "index.html"), headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
         app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
@@ -716,8 +775,8 @@ if __name__ == "__main__":
     try:
         import uvicorn
         if app:
-            uvicorn.run("server:app", host="0.0.0.0", port=port, log_level="info")
+            uvicorn.run("server:app", host="127.0.0.1", port=port, log_level="info")
         else:
-            ThreadingHTTPServer(("0.0.0.0", port), H).serve_forever()
+            ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
     except Exception:
-        ThreadingHTTPServer(("0.0.0.0", port), H).serve_forever()
+        ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()

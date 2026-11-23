@@ -6,19 +6,6 @@ Never manufactures prices, volumes, timestamps, candle values, IPO statuses, or 
 import os, sys, json, time, math, urllib.request, urllib.error, urllib.parse, re, uuid
 from typing import Dict, Any, Optional, List
 
-# ---------------------------------------------------------------------------
-# curl_cffi SSL bypass — required for yfinance on Windows dev environments
-# that block default SSL certificate verification. Applied once at import.
-# ---------------------------------------------------------------------------
-try:
-    import curl_cffi.requests as _c_req
-    _orig_c_init = _c_req.Session.__init__
-    def _safe_c_init(self, *args, **kwargs):
-        kwargs.setdefault("verify", False)
-        return _orig_c_init(self, *args, **kwargs)
-    _c_req.Session.__init__ = _safe_c_init
-except Exception:
-    pass  # curl_cffi not installed — yfinance will use stdlib SSL fallback
 
 # Load .env into os.environ if present
 _env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
@@ -334,7 +321,7 @@ def get_live_stock(symbol="AMZN", mode="live") -> Dict[str, Any]:
                         "as_of": data_ts
                     }
                 )
-                _set_cache(cache_key, contract, ttl=15)
+                _set_cache(cache_key, contract, ttl=45)
                 return contract
 
     # 2. Secondary: TwelveData
@@ -370,7 +357,7 @@ def get_live_stock(symbol="AMZN", mode="live") -> Dict[str, Any]:
                         "as_of": d.get("datetime", time.strftime("%Y-%m-%d %H:%M:%S"))
                     }
                 )
-                _set_cache(cache_key, contract, ttl=15)
+                _set_cache(cache_key, contract, ttl=45)
                 return contract
 
     # 3. Tertiary: AlphaVantage
@@ -402,7 +389,7 @@ def get_live_stock(symbol="AMZN", mode="live") -> Dict[str, Any]:
                         "as_of": q.get("07. latest trading day", time.strftime("%Y-%m-%d"))
                     }
                 )
-                _set_cache(cache_key, contract, ttl=15)
+                _set_cache(cache_key, contract, ttl=45)
                 return contract
 
     if mode == "demo":
@@ -516,7 +503,7 @@ def get_ohlcv(symbol="AMZN", interval="1day", outputsize=45, mode="live") -> Dic
                     "source": "Binance Klines (Real-time)"
                 }
             )
-            _set_cache(cache_key, contract, ttl=15)
+            _set_cache(cache_key, contract, ttl=45)
             return contract
 
     if TWELVEDATA_KEY:
@@ -820,7 +807,7 @@ def get_live_commodity(name="gold", mode="live") -> Dict[str, Any]:
             extra={"error": "Gold price unavailable from live providers.", "commodity": "Gold Spot"}
         )
 
-    # 3. Silver Spot — via yfinance SI=F (Silver Futures, liquid proxy for spot)
+    # 3. Silver Spot - via yfinance SI=F or oracle_providers fallback
     if any(w in k for w in ("silver", "xag")):
         try:
             import yfinance as yf
@@ -835,7 +822,7 @@ def get_live_commodity(name="gold", mode="live") -> Dict[str, Any]:
                 provider_symbol="SI=F",
                 provider_name="Yahoo Finance (Silver Futures SI=F)",
                 data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
-                feed_status="live",
+                feed_status="delayed",
                 kind="actual",
                 market_status="open",
                 status="ok",
@@ -854,8 +841,38 @@ def get_live_commodity(name="gold", mode="live") -> Dict[str, Any]:
             )
             _set_cache(cache_key, contract, ttl=30)
             return contract
-        except Exception as _yfe:
-            pass  # fall through to error contract
+        except Exception:
+            pass
+        try:
+            import oracle_providers as _op
+            _q = _op.get_quote("SILVER")
+            if _q.get("status") != "unavailable" and _q.get("price") is not None:
+                cur = float(_q["price"])
+                chg_pct = float(_q.get("change_pct") or 0.0)
+                contract = make_data_contract(
+                    requested_symbol="XAG/USD",
+                    provider_symbol="SI=F",
+                    provider_name=_q.get("source", "oracle_providers"),
+                    data_timestamp=str(_q.get("ts", "")),
+                    feed_status=_q.get("status", "delayed"),
+                    kind="actual",
+                    market_status="open" if _q.get("status") == "live" else "closed",
+                    status="ok",
+                    extra={
+                        "commodity": "Silver",
+                        "symbol": "SI=F",
+                        "price": round(cur, 4),
+                        "change_percent": f"{chg_pct:+.2f}%",
+                        "unit": "USD per troy oz",
+                        "currency": "USD",
+                        "source": _q.get("source", "oracle_providers"),
+                        "as_of": str(_q.get("ts", ""))
+                    }
+                )
+                _set_cache(cache_key, contract, ttl=30)
+                return contract
+        except Exception:
+            pass
         return make_data_contract(
             requested_symbol="XAG/USD",
             provider_symbol="SI=F",
@@ -869,7 +886,6 @@ def get_live_commodity(name="gold", mode="live") -> Dict[str, Any]:
                 "commodity": "Silver Spot"
             }
         )
-
     return make_data_contract(
         requested_symbol=name,
         provider_symbol="",
@@ -924,7 +940,7 @@ def get_natural_gas(mode="live") -> Dict[str, Any]:
                 _set_cache(cache_key, contract, ttl=30)
                 return contract
 
-    # Fallback to Yahoo Finance Natural Gas Futures (NG=F)
+    # Fallback to Yahoo Finance Natural Gas Futures (NG=F) or oracle_providers
     try:
         import yfinance as yf
         t = yf.Ticker("NG=F")
@@ -937,7 +953,7 @@ def get_natural_gas(mode="live") -> Dict[str, Any]:
             provider_symbol="NG=F",
             provider_name="Yahoo Finance (NG=F)",
             data_timestamp=time.strftime("%Y-%m-%d %H:%M:%S UTC"),
-            feed_status="live",
+            feed_status="delayed",
             kind="actual",
             market_status="open",
             status="ok",
@@ -946,14 +962,47 @@ def get_natural_gas(mode="live") -> Dict[str, Any]:
                 "symbol": "NG=F",
                 "price": round(p, 4),
                 "change": chg,
-                "unit": "USD per MMBtu (futures)",
+                "change_percent": f"{(chg/prev)*100:+.2f}%" if prev else "0.00%",
+                "unit": "USD per MMBtu (futures proxy)",
                 "currency": "USD",
                 "source": "Yahoo Finance NG=F",
+                "note": "Natural gas futures (NG=F); correlated liquid proxy for spot.",
                 "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
             }
         )
         _set_cache(cache_key, contract, ttl=30)
         return contract
+    except Exception:
+        pass
+
+    try:
+        import oracle_providers as _op
+        _q = _op.get_quote("NATURALGAS")
+        if _q.get("status") != "unavailable" and _q.get("price") is not None:
+            p = float(_q["price"])
+            chg_pct = float(_q.get("change_pct") or 0.0)
+            contract = make_data_contract(
+                requested_symbol="NATURAL_GAS_USD",
+                provider_symbol="NG=F",
+                provider_name=_q.get("source", "oracle_providers"),
+                data_timestamp=str(_q.get("ts", "")),
+                feed_status=_q.get("status", "delayed"),
+                kind="actual",
+                market_status="open" if _q.get("status") == "live" else "closed",
+                status="ok",
+                extra={
+                    "commodity": "Natural Gas",
+                    "symbol": "NG=F",
+                    "price": round(p, 4),
+                    "change_percent": f"{chg_pct:+.2f}%",
+                    "unit": "USD per MMBtu",
+                    "currency": "USD",
+                    "source": _q.get("source", "oracle_providers"),
+                    "as_of": str(_q.get("ts", ""))
+                }
+            )
+            _set_cache(cache_key, contract, ttl=30)
+            return contract
     except Exception:
         pass
 
@@ -968,8 +1017,6 @@ def get_natural_gas(mode="live") -> Dict[str, Any]:
         extra={"error": "Natural gas price unavailable from live providers."}
     )
 
-# -------------------------------------------------------------
-# 10. FOREX & INDIAN INDICES
 # -------------------------------------------------------------
 def get_forex(from_currency="USD", to_currency="INR", mode="live") -> Dict[str, Any]:
     fc = (from_currency or "USD").upper().strip()
@@ -1120,6 +1167,37 @@ def get_india_index(index="NIFTY 50", mode="live") -> Dict[str, Any]:
         _set_cache(cache_key, contract, ttl=60)
         return contract
     except Exception as _e:
+        try:
+            import oracle_providers as _op
+            _q = _op.get_quote(yf_sym or idx)
+            if _q.get("status") != "unavailable" and _q.get("price") is not None:
+                cur = float(_q["price"])
+                chg_pct = float(_q.get("change_pct") or 0.0)
+                _DISPLAY = {"^NSEI": "NIFTY 50", "^BSESN": "SENSEX", "^NSEBANK": "Bank NIFTY"}
+                display = _DISPLAY.get(yf_sym, idx)
+                contract = make_data_contract(
+                    requested_symbol=idx,
+                    provider_symbol=yf_sym,
+                    provider_name=_q.get("source", "oracle_providers"),
+                    data_timestamp=str(_q.get("ts", "")),
+                    feed_status=_q.get("status", "delayed"),
+                    kind="actual",
+                    market_status="open" if _q.get("status") == "live" else "closed",
+                    status="ok",
+                    extra={
+                        "index": display,
+                        "symbol": yf_sym,
+                        "price": round(cur, 2),
+                        "change_percent": f"{chg_pct:+.2f}%",
+                        "currency": "INR",
+                        "source": _q.get("source", "oracle_providers"),
+                        "as_of": str(_q.get("ts", ""))
+                    }
+                )
+                _set_cache(cache_key, contract, ttl=60)
+                return contract
+        except Exception:
+            pass
         return make_data_contract(
             requested_symbol=idx,
             provider_symbol=yf_sym,
@@ -1134,8 +1212,6 @@ def get_india_index(index="NIFTY 50", mode="live") -> Dict[str, Any]:
             }
         )
 
-# -------------------------------------------------------------
-# 11. CRYPTO
 # -------------------------------------------------------------
 def get_crypto_price(symbol="BTC", mode="live") -> Dict[str, Any]:
     sym = (symbol or "BTC").upper().strip()
@@ -1206,7 +1282,7 @@ def get_crypto_price(symbol="BTC", mode="live") -> Dict[str, Any]:
                     "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
                 }
             )
-            _set_cache(cache_key, contract, ttl=15)
+            _set_cache(cache_key, contract, ttl=45)
             return contract
 
     if FINNHUB_KEY:
@@ -1232,7 +1308,7 @@ def get_crypto_price(symbol="BTC", mode="live") -> Dict[str, Any]:
                     "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC")
                 }
             )
-            _set_cache(cache_key, contract, ttl=15)
+            _set_cache(cache_key, contract, ttl=45)
             return contract
 
     return make_data_contract(
@@ -1517,7 +1593,7 @@ def get_market_overview(mode="live") -> Dict[str, Any]:
         "as_of": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         "data_provenance": "Aggregated from verified upstream endpoints (Finnhub, TwelveData, OilPriceAPI)."
     }
-    _set_cache(cache_key, contract, ttl=15)
+    _set_cache(cache_key, contract, ttl=45)
     return contract
 
 # -------------------------------------------------------------

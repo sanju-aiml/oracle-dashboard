@@ -11,9 +11,12 @@ import joblib
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+finllm_root = r"C:\Users\BOTTA THARUN\OneDrive\Pictures\Screenshots\finllm (1)1\finllm"
+if os.path.exists(finllm_root) and finllm_root not in sys.path:
+    sys.path.insert(0, finllm_root)
 FINLLM_DIR = os.path.join(BASE_DIR, "uploaded_model", "finllm")
 if FINLLM_DIR not in sys.path:
-    sys.path.insert(0, FINLLM_DIR)
+    sys.path.append(FINLLM_DIR)
 
 RUNS_DIR = os.path.join(FINLLM_DIR, "runs")
 SIGNAL_MODEL_PATH = os.path.join(RUNS_DIR, "signal_model.joblib")
@@ -68,7 +71,7 @@ def get_model_status() -> Dict[str, Any]:
         "architecture": {
             "signal_classifier": "HistGradientBoostingClassifier with Purged Walk-Forward Splits",
             "neural_network": "DeepLOB 2D-Conv + Inception + LSTM (PyTorch)",
-            "safety_agent": "Bounded Reasoner with Zero-Hallucination Tool Routing & SEBI Guards",
+            "safety_agent": "Bounded Reasoner with Answers grounded in live data and your workspace data & SEBI Guards",
             "calculators": "Verified Exact CA & Banking Arithmetic (GST, EMI, Income Tax, TDS, SIP, Compound)"
         }
     }
@@ -160,8 +163,15 @@ def predict_signal(symbol: str = "AMZN", mode: str = "live") -> Dict[str, Any]:
     rsi = float(last_row.get("rsi14", pd.Series([50.0])).iloc[0])
     atr_pct = float(last_row.get("atr_pct", pd.Series([0.02])).iloc[0])
     bb_b = float(last_row.get("bb_pct_b", pd.Series([0.5])).iloc[0])
-    ret21 = float(last_row.get("ret21", pd.Series([0.0])).iloc[0])
-    vol63 = float(last_row.get("vol63", pd.Series([0.25])).iloc[0])
+    # 21-day momentum calculated directly from the last 21 daily closes
+    if df is not None and "close" in df and len(df["close"].dropna()) >= 22:
+        _c_vals = df["close"].dropna().values
+        ret21 = float((_c_vals[-1] / _c_vals[-22]) - 1.0)
+    elif "ret_21" in last_row:
+        ret21 = float(np.expm1(last_row["ret_21"].iloc[0]))
+    else:
+        ret21 = float(last_row.get("ret21", pd.Series([0.0])).iloc[0])
+    vol63 = float(last_row.get("vol_63", last_row.get("vol63", pd.Series([0.25]))).iloc[0])
 
     return {
         "status": "ok",
@@ -267,7 +277,7 @@ def calculate_ca_banking(calc_type: str, params: Dict[str, Any]) -> Dict[str, An
         return {"status": "error", "error": f"Unknown calculation type '{calc_type}'. Supported: gst, emi, tax_new_regime, tds_194c, sip_fv, compound"}
 
 def run_finllm_agent(message: str, user_name: str = "User") -> Dict[str, Any]:
-    """Execute FinLLM Agent runtime with tool calls, zero hallucination, and guardrails."""
+    """Execute FinLLM Agent runtime with tool calls, Answers grounded in live data and your workspace data, and guardrails."""
     from finllm.agent.tools import Tools
     from finllm.agent.runtime import Agent
     from finllm.data import calc
@@ -307,7 +317,7 @@ def run_finllm_agent(message: str, user_name: str = "User") -> Dict[str, Any]:
             if sym_cand.lower() in last_msg.lower() or (sym_cand == "AMZN" and "amazon" in last_msg.lower()) or (sym_cand == "GOOGL" and "google" in last_msg.lower()) or (sym_cand == "AAPL" and "apple" in last_msg.lower()):
                 return json.dumps({"tool": "signal", "args": {"symbol": sym_cand}})
 
-        # Fallback to general advice with zero hallucination guarantee
+        # Fallback to general advice with Answers grounded in live data and your workspace data
         return f"Hello {user_name}. FinLLM is ready to provide quantitative forecasts, risk parameters, and verified CA/banking math (GST, EMI, Income Tax, SIP). How can I assist your financial decision today?"
 
     audit_path = os.path.join(RUNS_DIR, "agent_audit.jsonl")
