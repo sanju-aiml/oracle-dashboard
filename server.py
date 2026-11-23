@@ -766,7 +766,10 @@ try:
 
         app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
-except ImportError:
+except Exception as _boot_err:
+    import traceback as _tb
+    print(f"[SERVER BOOT ERROR] FastAPI app failed to initialize: {_boot_err}")
+    _tb.print_exc()
     app = None
 
 if __name__ == "__main__":
