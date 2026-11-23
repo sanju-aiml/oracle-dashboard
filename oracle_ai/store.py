@@ -1,7 +1,9 @@
 """SQLite store: candles, quotes, predictions, paper account. This is ORACLE's own data,
 so answers keep working (clearly labeled stale) even when every live source is down."""
 import json
+import os
 import sqlite3
+import tempfile
 import threading
 import time
 from contextlib import contextmanager

@@ -496,13 +496,20 @@ try:
         return market.web_search(q)
 
     # Watchlist Prices (batch)
-    class WatchlistPayload(BaseModel):
-        symbols: List[str]
-        mode: Optional[str] = "live"
-
-    @app.post("/api/market/watchlist-prices")
-    def api_watchlist_prices(p: WatchlistPayload):
-        return market.get_watchlist_prices(p.symbols, mode=p.mode or "live")
+    @app.api_route("/api/market/watchlist-prices", methods=["GET", "POST"])
+    async def api_watchlist_prices(request: Request):
+        if request.method == "GET":
+            syms_str = request.query_params.get("symbols", "AAPL,MSFT,NVDA,AMZN,GOOGL")
+            syms = [s.strip().upper() for s in syms_str.split(",") if s.strip()]
+            mode = request.query_params.get("mode", "live")
+            return market.get_watchlist_prices(syms, mode=mode)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        syms = body.get("symbols") or ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL"]
+        mode = body.get("mode", "live")
+        return market.get_watchlist_prices(syms, mode=mode)
 
     # Paper Trading (oracle_ai paper account summary)
     @app.api_route("/api/market/paper-trade", methods=["GET", "POST"])
@@ -742,7 +749,11 @@ try:
     if not os.environ.get("VERCEL"):
         @app.on_event("startup")
         async def _start_oracle_bot():
-            asyncio.create_task(oracle_ai_bot.run_forever(_stop_oracle_bot))
+            try:
+                from oracle_ai import bot as oracle_ai_bot
+                asyncio.create_task(oracle_ai_bot.run_forever(_stop_oracle_bot))
+            except Exception as e:
+                print(f"[ORACLE] Bot task startup note: {e}")
             try:
                 from oracle_ai.smartapi_client import stream_manager
                 stream_manager.start()
