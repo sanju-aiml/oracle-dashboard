@@ -5,7 +5,12 @@ Never fabricate data: every number carries kind = 'actual' | 'calculated' | 'est
 import os, io, re, json, time, hmac, base64, hashlib, sqlite3, urllib.request, math
 import numpy as np, pandas as pd
 
-DB = os.environ.get("ORACLE_DB", "oracle.db")
+import tempfile
+# Detect serverless environment (Vercel / Lambda) where root filesystem is read-only
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    DB = os.environ.get("ORACLE_DB", os.path.join(tempfile.gettempdir(), "oracle.db"))
+else:
+    DB = os.environ.get("ORACLE_DB", "oracle.db")
 SECRET = os.environ.get("ORACLE_SECRET", "change-me-in-env").encode()
 DISCLAIMER = "Forecasts are estimates, not guarantees. Not investment, tax or accounting advice."
 
@@ -632,12 +637,15 @@ MIGS = [
 ]
 
 def migrate():
-    c = db(); c.execute("CREATE TABLE IF NOT EXISTS schema_version(v INTEGER)")
-    cur = c.execute("SELECT COALESCE(MAX(v),0) FROM schema_version").fetchone()[0]
-    for i, s in enumerate(MIGS[cur:], cur + 1):
-        c.executescript(s)
-        c.execute("INSERT INTO schema_version VALUES(?)", (i,))
-    c.commit(); c.close()
+    try:
+        c = db(); c.execute("CREATE TABLE IF NOT EXISTS schema_version(v INTEGER)")
+        cur = c.execute("SELECT COALESCE(MAX(v),0) FROM schema_version").fetchone()[0]
+        for i, s in enumerate(MIGS[cur:], cur + 1):
+            c.executescript(s)
+            c.execute("INSERT INTO schema_version VALUES(?)", (i,))
+        c.commit(); c.close()
+    except Exception as e:
+        print(f"[ORACLE] Database migration note: {e}")
 
 def _h(pw, salt): return hashlib.pbkdf2_hmac("sha256", pw.encode(), salt.encode(), 200_000).hex()
 def _sig(b): return base64.urlsafe_b64encode(hmac.new(SECRET, b, hashlib.sha256).digest())

@@ -732,23 +732,24 @@ try:
 
     _stop_oracle_bot = asyncio.Event()
 
-    @app.on_event("startup")
-    async def _start_oracle_bot():
-        asyncio.create_task(oracle_ai_bot.run_forever(_stop_oracle_bot))
-        try:
-            from oracle_ai.smartapi_client import stream_manager
-            stream_manager.start()
-        except Exception as e:
-            pass
+    if not os.environ.get("VERCEL"):
+        @app.on_event("startup")
+        async def _start_oracle_bot():
+            asyncio.create_task(oracle_ai_bot.run_forever(_stop_oracle_bot))
+            try:
+                from oracle_ai.smartapi_client import stream_manager
+                stream_manager.start()
+            except Exception as e:
+                pass
 
-    @app.on_event("shutdown")
-    async def _stop_oracle_bot_task():
-        _stop_oracle_bot.set()
-        try:
-            from oracle_ai.smartapi_client import stream_manager
-            stream_manager.stop()
-        except Exception:
-            pass
+        @app.on_event("shutdown")
+        async def _stop_oracle_bot_task():
+            _stop_oracle_bot.set()
+            try:
+                from oracle_ai.smartapi_client import stream_manager
+                stream_manager.stop()
+            except Exception:
+                pass
 
     class ChatPayload(BaseModel):
         message: str

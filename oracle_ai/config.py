@@ -3,18 +3,29 @@ import os
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 _odb = os.getenv("ORACLE_DB")
+_is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+
+import tempfile
+
 if os.getenv("ORACLE_AI_DB"):
     DB_PATH = os.getenv("ORACLE_AI_DB")
 elif _odb and os.path.basename(_odb).lower() != "oracle.db":
     DB_PATH = _odb
+elif _is_serverless:
+    DB_PATH = os.path.join(tempfile.gettempdir(), "oracle_data.db")
 else:
     DB_PATH = os.path.join(BASE, "data", "oracle_data.db")
+
 MODEL_DIR = os.getenv("ORACLE_MODELS", os.path.join(BASE, "models"))
-UPLOAD_DIR = os.getenv("ORACLE_UPLOADS", os.path.join(BASE, "uploads"))
-GATE_LOG = os.getenv("ORACLE_GATE_LOG", os.path.join(BASE, "gate_log.jsonl"))
+UPLOAD_DIR = os.getenv("ORACLE_UPLOADS", os.path.join(tempfile.gettempdir(), "uploads") if _is_serverless else os.path.join(BASE, "uploads"))
+GATE_LOG = os.getenv("ORACLE_GATE_LOG", os.path.join(tempfile.gettempdir(), "gate_log.jsonl") if _is_serverless else os.path.join(BASE, "gate_log.jsonl"))
+
 for _d in (os.path.dirname(DB_PATH), MODEL_DIR, UPLOAD_DIR):
     if _d:
-        os.makedirs(_d, exist_ok=True)
+        try:
+            os.makedirs(_d, exist_ok=True)
+        except OSError:
+            pass
 
 # ---- keys / switches -------------------------------------------------------
 FINNHUB_KEY = os.getenv("FINNHUB_KEY", "")          # optional, free key from finnhub.io
