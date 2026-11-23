@@ -23,6 +23,10 @@ finllm_root = r"C:\Users\BOTTA THARUN\OneDrive\Pictures\Screenshots\finllm (1)1\
 if os.path.exists(finllm_root) and finllm_root not in sys.path:
     sys.path.insert(0, finllm_root)
 
+_repo_finllm = os.path.join(cur_dir, "uploaded_model", "finllm")
+if os.path.exists(_repo_finllm) and _repo_finllm not in sys.path:
+    sys.path.insert(0, _repo_finllm)
+
 def _num(d: dict, *keys):
     for k in keys:
         v = d.get(k)

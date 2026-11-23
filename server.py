@@ -710,25 +710,29 @@ try:
     def api_audit(user=Depends(require_user)):
         return {"kind": "actual", "logs": core.get_audit_trail(user)}
 
-    from oracle_wiring import build_bot_router
-    import finllm_engine
-    app.include_router(build_bot_router(
-        app, market, core, get_current_user,
-        signal_fn=finllm_engine.predict_signal,
-        deeplob_fn=finllm_engine.run_deeplob_signal,
-        place_order_fn=lambda rec: market.place_alpaca_order(rec.get("symbol", "AMZN"), rec.get("qty", 1), rec.get("side", "buy"))
-    ))
+    try:
+        from oracle_wiring import build_bot_router
+        import finllm_engine
+        app.include_router(build_bot_router(
+            app, market, core, get_current_user,
+            signal_fn=finllm_engine.predict_signal,
+            deeplob_fn=finllm_engine.run_deeplob_signal,
+            place_order_fn=lambda rec: market.place_alpaca_order(rec.get("symbol", "AMZN"), rec.get("qty", 1), rec.get("side", "buy"))
+        ))
+    except Exception as _bot_err:
+        print(f"[ORACLE] Bot router optional mount note: {_bot_err}")
 
     # Mount oracle_ai market-intelligence backend
-    import sys
-    _oracle_ai_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "oracle_ai")
-    if _oracle_ai_dir not in sys.path:
-        sys.path.insert(0, _oracle_ai_dir)
+    try:
+        import sys
+        _oracle_ai_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "oracle_ai")
+        if _oracle_ai_dir not in sys.path:
+            sys.path.insert(0, _oracle_ai_dir)
 
-    from oracle_ai import routes as oracle_ai_routes
-    from oracle_ai import bot as oracle_ai_bot
-
-    app.include_router(oracle_ai_routes.router)
+        from oracle_ai import routes as oracle_ai_routes
+        app.include_router(oracle_ai_routes.router)
+    except Exception as _ai_err:
+        print(f"[ORACLE] Oracle AI router optional mount note: {_ai_err}")
 
     _stop_oracle_bot = asyncio.Event()
 
@@ -770,11 +774,18 @@ try:
     if os.path.exists(STATIC):
         app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
+except ImportError:
+    app = None
 except Exception as _boot_err:
     import traceback as _tb
-    print(f"[SERVER BOOT ERROR] FastAPI app failed to initialize: {_boot_err}")
+    print(f"[SERVER BOOT ERROR] FastAPI initialization warning: {_boot_err}")
     _tb.print_exc()
-    app = None
+    if 'app' not in locals() or app is None:
+        try:
+            from fastapi import FastAPI
+            app = FastAPI(title="ORACLE Fallback")
+        except Exception:
+            app = None
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

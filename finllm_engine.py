@@ -16,7 +16,7 @@ if os.path.exists(finllm_root) and finllm_root not in sys.path:
     sys.path.insert(0, finllm_root)
 FINLLM_DIR = os.path.join(BASE_DIR, "uploaded_model", "finllm")
 if FINLLM_DIR not in sys.path:
-    sys.path.append(FINLLM_DIR)
+    sys.path.insert(0, FINLLM_DIR)
 
 RUNS_DIR = os.path.join(FINLLM_DIR, "runs")
 SIGNAL_MODEL_PATH = os.path.join(RUNS_DIR, "signal_model.joblib")
