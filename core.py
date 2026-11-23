@@ -6,8 +6,20 @@ import os, io, re, json, time, hmac, base64, hashlib, sqlite3, urllib.request, m
 import numpy as np, pandas as pd
 
 import tempfile
-# Detect serverless environment (Vercel / Lambda) where root filesystem is read-only
-if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+
+def _is_serverless_or_readonly():
+    if any(k.startswith("VERCEL") or k.startswith("AWS_") for k in os.environ):
+        return True
+    try:
+        _probe = os.path.join(os.path.dirname(os.path.abspath(__file__)), f".chk_{os.getpid()}")
+        with open(_probe, "w") as f:
+            f.write("1")
+        os.remove(_probe)
+        return False
+    except Exception:
+        return True
+
+if _is_serverless_or_readonly():
     DB = os.environ.get("ORACLE_DB", os.path.join(tempfile.gettempdir(), "oracle.db"))
 else:
     DB = os.environ.get("ORACLE_DB", "oracle.db")
@@ -622,7 +634,24 @@ def chat(msg, dash):
 
 # ---------- auth, workspaces, roles ----------
 def db():
-    c = sqlite3.connect(DB); c.row_factory = sqlite3.Row; return c
+    global DB
+    candidates = [
+        DB,
+        os.path.join(tempfile.gettempdir(), "oracle.db"),
+        ":memory:"
+    ]
+    for target in candidates:
+        try:
+            c = sqlite3.connect(target, check_same_thread=False)
+            c.row_factory = sqlite3.Row
+            c.execute("CREATE TABLE IF NOT EXISTS _probe (id INTEGER)")
+            DB = target
+            return c
+        except Exception:
+            continue
+    c = sqlite3.connect(":memory:")
+    c.row_factory = sqlite3.Row
+    return c
 
 MIGS = [
     # 1: Initial core tables

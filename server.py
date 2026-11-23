@@ -11,7 +11,10 @@ for line in (open(".env").read().splitlines() if os.path.exists(".env") else [])
         os.environ.setdefault(k.strip(), v.strip())
 
 core.SECRET = os.environ.get("ORACLE_SECRET", "change-me-in-env").encode()
-core.migrate()
+try:
+    core.migrate()
+except Exception as _mig_err:
+    print(f"[ORACLE] Startup migration notice: {_mig_err}")
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 paper_trader = market.PaperTradingEngine(1000000.0)

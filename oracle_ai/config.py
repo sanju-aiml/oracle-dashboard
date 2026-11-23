@@ -3,7 +3,19 @@ import os
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 _odb = os.getenv("ORACLE_DB")
-_is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+
+def _check_readonly():
+    if any(k.startswith("VERCEL") or k.startswith("AWS_") for k in os.environ):
+        return True
+    try:
+        p = os.path.join(BASE, f".chk_{os.getpid()}")
+        with open(p, "w") as f: f.write("1")
+        os.remove(p)
+        return False
+    except Exception:
+        return True
+
+_is_serverless = _check_readonly()
 
 import tempfile
 
